@@ -1,73 +1,87 @@
-# React + TypeScript + Vite
+# DomeKeep
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+DomeKeep is an Android application that serves as an intelligent bridge between your content consumption and AnkiDroid. It allows you to share text or URLs from any app, uses Gemini AI to extract atomic facts and generate high-quality flashcards, and then lets you selectively add them to your AnkiDroid decks.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Share Integration**: Seamlessly share text or links from any Android app (Chrome, Twitter, Reddit, etc.) directly to DomeKeep.
+- **Web Clipper**: When sharing URLs, DomeKeep launches a distraction-free reader view to extract the main content before processing.
+- **AI-Powered Generation**: Uses Google's Gemini Flash Lite model to:
+  1.  Extract atomic, testable facts from the source text.
+  2.  Convert those facts into well-structured Anki flashcards (Front/Back/Tags).
+- **Manual Review**: Review generated cards before they enter your deck. Edit or discard cards that don't meet your standards.
+- **AnkiDroid Integration**: Direct integration with the AnkiDroid API to create decks, models, and notes without exporting/importing files.
+- **"Hot-Share" Support**: Works whether the app is cold-started or already running in the background.
 
-## React Compiler
+## How It Works
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1.  **Capture**: The user shares content via the Android System Share Sheet.
+    -   *Text Share*: The text is processed directly.
+    -   *URL Share*: A native WebView opens, and `Readability.js` extracts the article content.
+2.  **Process**:
+    -   **Fact Extraction**: The raw content is sent to Gemini with a prompt to extract "atomic facts"—single, indivisible pieces of information.
+    -   **Card Generation**: These facts are fed back into Gemini to generate Flashcards with a Front, Back, and Tags.
+3.  **Review**: The user is presented with a list of generated cards.
+4.  **Export**: The user clicks "Add" on specific cards. The app uses the AnkiDroid Content Provider API to insert the note into the "DomeKeep" deck.
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+-   **Frontend**: React, Ionic Framework, TypeScript
+-   **Build Tool**: Vite
+-   **Native Runtime**: Capacitor
+-   **AI**: Google Gemini API (Flash Lite model)
+-   **Android Integration**:
+    -   Custom Capacitor Plugins (`AnkiDroid`, `ShareReceiver`, `WebClipper`)
+    -   Java / Android SDK
+-   **Target App**: AnkiDroid (must be installed on the device)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Installation & Setup
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prerequisites
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+-   Node.js & npm
+-   Android Studio (for building the APK)
+-   AnkiDroid installed on your Android device/emulator.
+    -   *Note*: You must enable the API in AnkiDroid: `Settings -> Advanced -> Enable AnkiDroid API`.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Steps
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/domekeep.git
+    cd domekeep
+    ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Configure Environment**
+    Create a `.env` file in the root directory:
+    ```env
+    VITE_GEMINI_API_KEY=your_gemini_api_key_here
+    VITE_GEMINI_MODEL_NAME=gemini-2.0-flash-lite-preview-02-05
+    ```
+
+4.  **Sync Capacitor**
+    ```bash
+    npx cap sync android
+    ```
+
+5.  **Run on Android**
+    ```bash
+    npx cap run android
+    ```
+    Or open in Android Studio:
+    ```bash
+    npx cap open android
+    ```
+
+## Contributing
+
+Contributions are welcome! Please follow the existing code style and document any new features or modules as per `agents.md`.
+
+## License
+
+MIT
