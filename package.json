@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/share": "^8.0.0",
     "@google/generative-ai": "^0.24.1",

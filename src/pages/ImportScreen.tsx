@@ -18,6 +18,7 @@ import {
 	IonChip,
 } from '@ionic/react';
 import { Share } from '@capacitor/share';
+import ShareReceiver from '../plugins/ShareReceiver';
 import { parseIncomingShare } from '../lib/share/parseIncoming';
 import type { IncomingShare } from '../lib/share/parseIncoming';
 import { generateFacts } from '../lib/gemini/generateFacts';
@@ -45,8 +46,28 @@ const ImportScreen: React.FC = () => {
 	const [generatedCards, setGeneratedCards] = useState<Flashcard[]>([]);
 	const [errorMsg, setErrorMsg] = useState<string>('');
 
+
+	// ... 
+
 	useEffect(() => {
 		init();
+
+		const listener = (ShareReceiver as any).addListener('shareReceived', (data: any) => {
+			console.log('Share received while running:', data);
+			if (data.value && data.mode) {
+				setShareData({ mode: data.mode, content: data.value });
+				setLog(`Received new ${data.mode}: ${data.value.slice(0, 50)}...`);
+				if (data.mode === 'url') {
+					setState('READY_TO_EXTRACT');
+				} else {
+					startProcessing(data.value, 'Shared Text');
+				}
+			}
+		});
+
+		return () => {
+			listener.then((handle: any) => handle.remove());
+		};
 	}, []);
 
 	const init = async () => {
@@ -54,6 +75,7 @@ const ImportScreen: React.FC = () => {
 		const share = await parseIncomingShare();
 		if (share) {
 			setShareData(share);
+			// ... existing init logic ...
 			setLog(`Received ${share.mode}: ${share.content.slice(0, 50)}...`);
 			if (share.mode === 'url') {
 				setState('READY_TO_EXTRACT');
