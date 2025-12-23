@@ -1,10 +1,10 @@
-package com.snortstudios.domekeep;
+package com.snortstudios.masterflasher;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
-import com.snortstudios.domekeep.plugins.AnkiDroidPlugin;
-import com.snortstudios.domekeep.plugins.ShareReceiverPlugin;
-import com.snortstudios.domekeep.plugins.WebClipperPlugin;
+import com.snortstudios.masterflasher.plugins.AnkiDroidPlugin;
+import com.snortstudios.masterflasher.plugins.ShareReceiverPlugin;
+import com.snortstudios.masterflasher.plugins.WebClipperPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override

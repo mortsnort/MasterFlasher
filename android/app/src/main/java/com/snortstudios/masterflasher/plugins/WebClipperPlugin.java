@@ -1,4 +1,4 @@
-package com.snortstudios.domekeep.plugins;
+package com.snortstudios.masterflasher.plugins;
 
 import android.content.Intent;
 import androidx.activity.result.ActivityResult;

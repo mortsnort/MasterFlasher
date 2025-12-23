@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.snortstudios.domekeep',
-  appName: 'DomeKeep',
+  appId: 'com.snortstudios.masterflasher',
+  appName: 'MasterFlasher',
   webDir: 'dist'
 };
 

@@ -45,7 +45,7 @@ export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsRespo
 Using these facts, generate between 1 and 20 basic Anki flashcards. 
 Front should be a clear question/prompt; back is the answer. 
 Add 1-4 short tags. Return only valid JSON.
-Deck Name: DomeKeep
+Deck Name: MasterFlasher
 
 Facts:
 ${factsJson}

@@ -1,11 +1,11 @@
-# DomeKeep
+# MasterFlasher
 
-DomeKeep is an Android application that serves as an intelligent bridge between your content consumption and AnkiDroid. It allows you to share text or URLs from any app, uses Gemini AI to extract atomic facts and generate high-quality flashcards, and then lets you selectively add them to your AnkiDroid decks.
+MasterFlasher is an Android application that serves as an intelligent bridge between your content consumption and AnkiDroid. It allows you to share text or URLs from any app, uses Gemini AI to extract atomic facts and generate high-quality flashcards, and then lets you selectively add them to your AnkiDroid decks.
 
 ## Features
 
-- **Share Integration**: Seamlessly share text or links from any Android app (Chrome, Twitter, Reddit, etc.) directly to DomeKeep.
-- **Web Clipper**: When sharing URLs, DomeKeep launches a distraction-free reader view to extract the main content before processing.
+- **Share Integration**: Seamlessly share text or links from any Android app (Chrome, Twitter, Reddit, etc.) directly to MasterFlasher.
+- **Web Clipper**: When sharing URLs, MasterFlasher launches a distraction-free reader view to extract the main content before processing.
 - **AI-Powered Generation**: Uses Google's Gemini Flash Lite model to:
   1.  Extract atomic, testable facts from the source text.
   2.  Convert those facts into well-structured Anki flashcards (Front/Back/Tags).
@@ -22,7 +22,7 @@ DomeKeep is an Android application that serves as an intelligent bridge between 
     -   **Fact Extraction**: The raw content is sent to Gemini with a prompt to extract "atomic facts"—single, indivisible pieces of information.
     -   **Card Generation**: These facts are fed back into Gemini to generate Flashcards with a Front, Back, and Tags.
 3.  **Review**: The user is presented with a list of generated cards.
-4.  **Export**: The user clicks "Add" on specific cards. The app uses the AnkiDroid Content Provider API to insert the note into the "DomeKeep" deck.
+4.  **Export**: The user clicks "Add" on specific cards. The app uses the AnkiDroid Content Provider API to insert the note into the "MasterFlasher" deck.
 
 ## Tech Stack
 
@@ -48,8 +48,8 @@ DomeKeep is an Android application that serves as an intelligent bridge between 
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/yourusername/domekeep.git
-    cd domekeep
+    git clone https://github.com/yourusername/masterflasher.git
+    cd masterflasher
     ```
 
 2.  **Install Dependencies**

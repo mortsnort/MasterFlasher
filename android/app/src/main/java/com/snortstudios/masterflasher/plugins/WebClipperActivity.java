@@ -1,4 +1,4 @@
-package com.snortstudios.domekeep.plugins;
+package com.snortstudios.masterflasher.plugins;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -9,7 +9,7 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.view.View;
 import android.widget.Toast;
-import com.snortstudios.domekeep.R;
+import com.snortstudios.masterflasher.R;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

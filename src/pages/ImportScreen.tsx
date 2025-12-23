@@ -154,8 +154,8 @@ const ImportScreen: React.FC = () => {
 			}
 
 			await AnkiDroid.addBasicCard({
-				deckName: 'DomeKeep',
-				modelKey: 'com.snortstudios.domekeep',
+				deckName: 'MasterFlasher',
+				modelKey: 'com.snortstudios.masterflasher',
 				front: card.front,
 				back: card.back,
 				tags: card.tags || [],
@@ -184,7 +184,7 @@ const ImportScreen: React.FC = () => {
 		<IonPage>
 			<IonHeader>
 				<IonToolbar>
-					<IonTitle>DomeKeep Import</IonTitle>
+					<IonTitle>MasterFlasher Import</IonTitle>
 				</IonToolbar>
 			</IonHeader>
 			<IonContent className="ion-padding">

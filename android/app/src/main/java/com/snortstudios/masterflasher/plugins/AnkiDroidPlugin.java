@@ -1,4 +1,4 @@
-package com.snortstudios.domekeep.plugins;
+package com.snortstudios.masterflasher.plugins;
 
 import android.content.Context;
 import com.getcapacitor.JSArray;
@@ -77,7 +77,7 @@ public class AnkiDroidPlugin extends Plugin {
     @PluginMethod
     public void addBasicCard(PluginCall call) {
         String deckName = call.getString("deckName");
-        String modelName = call.getString("modelKey", "com.snortstudios.domekeep.basic"); 
+        String modelName = call.getString("modelKey", "com.snortstudios.masterflasher.basic"); 
         String front = call.getString("front");
         String back = call.getString("back");
         JSArray tagsArray = call.getArray("tags");

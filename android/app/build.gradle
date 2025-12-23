@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.snortstudios.domekeep"
+    namespace = "com.snortstudios.masterflasher"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.snortstudios.domekeep"
+        applicationId "com.snortstudios.masterflasher"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
