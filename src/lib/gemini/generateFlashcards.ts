@@ -37,6 +37,7 @@ export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsRespo
 		generationConfig: {
 			responseMimeType: 'application/json',
 			responseSchema: schema,
+			maxOutputTokens: 8192,
 		},
 	});
 

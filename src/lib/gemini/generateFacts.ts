@@ -36,6 +36,7 @@ export async function generateFacts(text: string, title?: string): Promise<Facts
 		generationConfig: {
 			responseMimeType: 'application/json',
 			responseSchema: schema,
+			maxOutputTokens: 8192,
 		},
 	});
 
@@ -52,7 +53,7 @@ Be written as a single declarative sentence
 
 Context/Title: ${title || 'Unknown'}
 Text:
-${text.slice(0, 25000)} // Truncate to avoid context limit issues just in case, though Flash handles more.
+${text.slice(0, 30000)} // Truncate to avoid context limit issues, increased for full pages
   `;
 
 	try {
