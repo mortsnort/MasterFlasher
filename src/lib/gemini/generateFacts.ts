@@ -40,7 +40,16 @@ export async function generateFacts(text: string, title?: string): Promise<Facts
 	});
 
 	const prompt = `
-Extract up to 10 important, atomic, testable facts from the text. Each fact must be one clear statement.
+Extract all explicit, relevant facts stated in the text.
+
+Each fact must:
+
+Be explicitly stated (no inference or interpretation)
+
+Be atomic (one claim per fact)
+
+Be written as a single declarative sentence
+
 Context/Title: ${title || 'Unknown'}
 Text:
 ${text.slice(0, 25000)} // Truncate to avoid context limit issues just in case, though Flash handles more.

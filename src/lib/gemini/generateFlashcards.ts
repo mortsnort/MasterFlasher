@@ -42,9 +42,9 @@ export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsRespo
 
 	const factsJson = JSON.stringify(facts, null, 2);
 	const prompt = `
-Using these facts, generate between 1 and 20 basic Anki flashcards. 
+Using these facts, generate a flash card for each fact. 
 Front should be a clear question/prompt; back is the answer. 
-Add 1-4 short tags. Return only valid JSON.
+Add 1-4 short tags.
 Deck Name: MasterFlasher
 
 Facts:
