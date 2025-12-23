@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import type { Schema } from '@google/generative-ai';
-import { validateFactsResponse } from '../validation/validateJson';
-import type { FactsResponse } from '../anki/types';
+import type { FactsResponse, Fact } from '../anki/types';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const MODEL_NAME = import.meta.env.VITE_GEMINI_MODEL_NAME; // or flash-lite when available, strict JSON enforcement
@@ -17,18 +16,45 @@ const schema: Schema = {
 			items: {
 				type: SchemaType.OBJECT,
 				properties: {
-					id: { type: SchemaType.STRING },
 					fact: { type: SchemaType.STRING },
-					context: { type: SchemaType.STRING },
 				},
-				required: ['id', 'fact'],
+				required: ['fact'],
 			},
 		},
 	},
 	required: ['facts'],
 };
 
-export async function generateFacts(text: string, title?: string): Promise<FactsResponse> {
+// Helper: Split text into chunks of ~15k characters at sentence boundaries
+function chunkText(text: string, chunkSize = 15000): string[] {
+	if (text.length <= chunkSize) return [text];
+
+	const chunks: string[] = [];
+	let currentChunk = '';
+	const sentences = text.match(/[^.!?]+[.!?]+(\s|$)/g) || [text];
+
+	for (const sentence of sentences) {
+		if ((currentChunk + sentence).length > chunkSize) {
+			if (currentChunk) chunks.push(currentChunk);
+			currentChunk = sentence;
+		} else {
+			currentChunk += sentence;
+		}
+	}
+	if (currentChunk) chunks.push(currentChunk);
+
+	// Fallback for massive sentences or failures
+	if (chunks.length === 0 && text.length > 0) return [text];
+
+	return chunks;
+}
+
+// Generate unique ID (simple UUID v4)
+function generateId(): string {
+	return crypto.randomUUID();
+}
+
+async function verifyAndGenerateFacts(text: string, title?: string): Promise<Fact[]> {
 	if (!API_KEY) throw new Error('Gemini API Key not found');
 
 	const model = genAI.getGenerativeModel({
@@ -41,28 +67,63 @@ export async function generateFacts(text: string, title?: string): Promise<Facts
 	});
 
 	const prompt = `
-Extract all explicit, relevant facts stated in the text.
+Extract explicit, relevant facts stated in the text.
 
-Each fact must:
-
-Be explicitly stated (no inference or interpretation)
-
-Be atomic (one claim per fact)
-
-Be written as a single declarative sentence
+Constraints:
+1. Extract between 25 and 50 of the most important facts.
+2. Each fact must be a single declarative sentence.
+3. Maximum length per fact: 240 characters.
+4. No inference or interpretation - only explicit statements.
 
 Context/Title: ${title || 'Unknown'}
 Text:
-${text.slice(0, 30000)} // Truncate to avoid context limit issues, increased for full pages
+${text}
   `;
 
 	try {
 		const result = await model.generateContent(prompt);
 		const responseText = result.response.text();
 		const json = JSON.parse(responseText);
-		return validateFactsResponse(json);
+
+		// Validate structure locally since we removed strict schema for id/context
+		if (!json.facts || !Array.isArray(json.facts)) {
+			console.warn('Invalid facts structure from chunk', json);
+			return [];
+		}
+
+		// Map to Fact objects, assigning IDs client-side
+		return json.facts.map((f: any) => ({
+			id: generateId(),
+			fact: f.fact,
+			// context removed per user request
+		})).filter((f: any) => f.fact && typeof f.fact === 'string');
+
 	} catch (e) {
-		console.error('Gemini Facts Generation Failed', e);
-		throw e;
+		console.error('Gemini Facts Generation Failed for chunk', e);
+		return []; // Return empty for this chunk rather than failing everything
 	}
+}
+
+export async function generateFacts(text: string, title?: string): Promise<FactsResponse> {
+	// 1. Chunk the text
+	const chunks = chunkText(text);
+	console.log(`Processing ${chunks.length} chunks...`);
+
+	// 2. Process chunks (concurrently or sequentially? Sequential to respect rate limits if needed, but parallel is faster)
+	// Using Promise.all for speed, assuming API limits allow. Flash Lite has high TPM.
+	const results = await Promise.all(
+		chunks.map((chunk) => verifyAndGenerateFacts(chunk, title))
+	);
+
+	// 3. Merge results
+	const allFacts = results.flat();
+
+	// 4. Final limit check (optional, but good to keep total manageable)
+	// If specific per-chunk limits are adhered to, total should be reasonable. 
+	// We do NOT strictly truncate here to strict 10 items like before, as user asked for 25-50 scale.
+
+	return {
+		sourceTitle: title,
+		facts: allFacts,
+	};
 }

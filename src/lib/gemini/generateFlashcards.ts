@@ -17,12 +17,11 @@ const schema: Schema = {
 			items: {
 				type: SchemaType.OBJECT,
 				properties: {
-					type: { type: SchemaType.STRING }, // Enforced by prompt to be 'basic'
 					front: { type: SchemaType.STRING },
 					back: { type: SchemaType.STRING },
 					tags: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
 				},
-				required: ['type', 'front', 'back'],
+				required: ['front', 'back'],
 			},
 		},
 	},
@@ -56,6 +55,12 @@ ${factsJson}
 		const result = await model.generateContent(prompt);
 		const responseText = result.response.text();
 		const json = JSON.parse(responseText);
+
+		// Deterministically add the type 'basic' to satisfy validation and typing
+		if (json.cards && Array.isArray(json.cards)) {
+			json.cards = json.cards.map((c: any) => ({ ...c, type: 'basic' }));
+		}
+
 		return validateFlashcardsResponse(json);
 	} catch (e) {
 		console.error('Gemini Flashcards Generation Failed', e);
