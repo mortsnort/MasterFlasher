@@ -17,7 +17,6 @@ import {
 	IonLabel,
 	IonChip,
 } from '@ionic/react';
-import { Share } from '@capacitor/share';
 import ShareReceiver from '../plugins/ShareReceiver';
 import { parseIncomingShare } from '../lib/share/parseIncoming';
 import type { IncomingShare } from '../lib/share/parseIncoming';
@@ -39,15 +38,20 @@ type UIState =
 	| 'FALLBACK'
 	| 'ERROR';
 
+// Local type for UI state management
+type ReviewCard = Flashcard & {
+	status: 'idle' | 'adding' | 'added' | 'error';
+};
+
 const ImportScreen: React.FC = () => {
-	const [state, setState] = useState<UIState>('IDLE');
+	const [state, setState] = useState<UIState | 'REVIEW_CARDS'>('IDLE');
 	const [shareData, setShareData] = useState<IncomingShare | null>(null);
 	const [log, setLog] = useState<string>('Waiting for share...');
-	const [generatedCards, setGeneratedCards] = useState<Flashcard[]>([]);
+	const [generatedCards, setGeneratedCards] = useState<ReviewCard[]>([]);
 	const [errorMsg, setErrorMsg] = useState<string>('');
 
-
 	// ... 
+	// (Import ShareReceiver etc. remains)
 
 	useEffect(() => {
 		init();
@@ -113,23 +117,35 @@ const ImportScreen: React.FC = () => {
 			setState('GENERATING_CARDS');
 			setLog('Generating flashcards...');
 			const cardsResp = await generateFlashcards(factsResp.facts);
-			setGeneratedCards(cardsResp.cards);
-			setLog(`Generated ${cardsResp.cards.length} cards.`);
 
-			await addToAnki(cardsResp.cards);
+			// Map to ReviewCard
+			const reviewCards: ReviewCard[] = cardsResp.cards.map(c => ({
+				...c,
+				status: 'idle'
+			}));
+			setGeneratedCards(reviewCards);
+			setLog(`Generated ${cardsResp.cards.length} cards. Ready for review.`);
+
+			// AUTO-ADD REMOVED. Now we go to review state.
+			setState('REVIEW_CARDS');
 		} catch (e) {
 			console.error(e);
 			handleError('Processing failed: ' + (e instanceof Error ? e.message : String(e)));
 		}
 	};
 
-	const addToAnki = async (cards: Flashcard[]) => {
-		setState('ADDING_TO_ANKI');
+	const addSingleCard = async (index: number) => {
+		const card = generatedCards[index];
+		if (card.status === 'added' || card.status === 'adding') return;
+
+		// Optimistic update
+		const newCards = [...generatedCards];
+		newCards[index].status = 'adding';
+		setGeneratedCards(newCards);
+
 		try {
 			const available = await AnkiDroid.isAvailable();
-			if (!available.value) {
-				throw new Error('AnkiDroid not available');
-			}
+			if (!available.value) throw new Error('AnkiDroid not available');
 
 			const perm = await AnkiDroid.hasPermission();
 			if (!perm.value) {
@@ -137,22 +153,24 @@ const ImportScreen: React.FC = () => {
 				if (!req.value) throw new Error('Permission denied');
 			}
 
-			for (const card of cards) {
-				// Deck Name HARDCODED as per spec
-				await AnkiDroid.addBasicCard({
-					deckName: 'DomeKeep',
-					modelKey: 'com.snortstudios.domekeep',
-					front: card.front,
-					back: card.back,
-					tags: card.tags || [],
-				});
-			}
-			setState('SUCCESS');
-			setLog('All cards added to AnkiDroid!');
+			await AnkiDroid.addBasicCard({
+				deckName: 'DomeKeep',
+				modelKey: 'com.snortstudios.domekeep',
+				front: card.front,
+				back: card.back,
+				tags: card.tags || [],
+			});
+
+			const successCards = [...generatedCards];
+			successCards[index].status = 'added';
+			setGeneratedCards(successCards);
+
 		} catch (e) {
-			console.warn('Anki Add Failed, falling back', e);
-			setState('FALLBACK');
-			setLog('Could not add directly to AnkiDroid.');
+			console.error(e);
+			const failCards = [...generatedCards];
+			failCards[index].status = 'error';
+			setGeneratedCards(failCards);
+			// Optionally show toast or error
 		}
 	};
 
@@ -161,20 +179,6 @@ const ImportScreen: React.FC = () => {
 		setState('ERROR');
 	};
 
-	const handleFallbackShare = async () => {
-		if (generatedCards.length === 0) return;
-
-		// const subject = generatedCards[0].front;
-		const text = generatedCards.map(c =>
-			`Front: ${c.front}\nBack: ${c.back}\nTags: ${c.tags?.join(', ')}`
-		).join('\n\n---\n\n');
-
-		await Share.share({
-			title: 'DomeKeep Flashcards',
-			text: text,
-			dialogTitle: 'Share Flashcards to AnkiDroid',
-		});
-	};
 
 	return (
 		<IonPage>
@@ -220,34 +224,11 @@ const ImportScreen: React.FC = () => {
 					</IonCard>
 				)}
 
-				{/* Fallback */}
-				{state === 'FALLBACK' && (
-					<IonCard color="warning">
-						<IonCardHeader>
-							<IonCardTitle>Add to Anki Failed</IonCardTitle>
-						</IonCardHeader>
-						<IonCardContent>
-							<p>We couldn't add the cards directly. Please share them to AnkiDroid manually.</p>
-							<IonButton expand="block" onClick={handleFallbackShare}>Share Cards</IonButton>
-						</IonCardContent>
-					</IonCard>
-				)}
-
-				{/* Success */}
-				{state === 'SUCCESS' && (
-					<IonCard color="success">
-						<IonCardContent>
-							<h2>Success!</h2>
-							<p>Added {generatedCards.length} cards to deck "DomeKeep".</p>
-							<IonButton expand="block" fill="outline" color="light" onClick={() => (navigator as any).app.exitApp()}>Close</IonButton>
-						</IonCardContent>
-					</IonCard>
-				)}
-
-				{/* Preview Cards */}
-				{generatedCards.length > 0 && (
+				{/* Review / Success List */}
+				{(state === 'REVIEW_CARDS' || state === 'SUCCESS') && generatedCards.length > 0 && (
 					<div style={{ marginTop: 20 }}>
-						<h3>Generated Cards</h3>
+						<h3>Review Cards</h3>
+						<p>Total: {generatedCards.length}</p>
 						<IonList>
 							{generatedCards.map((card, i) => (
 								<IonItem key={i}>
@@ -256,6 +237,15 @@ const ImportScreen: React.FC = () => {
 										<p>A: {card.back}</p>
 										{card.tags && card.tags.map(t => <IonChip key={t}>{t}</IonChip>)}
 									</IonLabel>
+									<IonButton
+										slot="end"
+										fill={card.status === 'added' ? 'clear' : 'solid'}
+										color={card.status === 'error' ? 'danger' : (card.status === 'added' ? 'success' : 'primary')}
+										disabled={card.status === 'adding' || card.status === 'added'}
+										onClick={() => addSingleCard(i)}
+									>
+										{card.status === 'adding' ? '...' : (card.status === 'added' ? 'Added' : (card.status === 'error' ? 'Retry' : 'Add'))}
+									</IonButton>
 								</IonItem>
 							))}
 						</IonList>
