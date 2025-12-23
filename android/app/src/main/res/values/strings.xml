@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DomeKeep</string>
+    <string name="title_activity_main">DomeKeep</string>
+    <string name="package_name">com.snortstudios.domekeep</string>
+    <string name="custom_url_scheme">com.snortstudios.domekeep</string>
+</resources>

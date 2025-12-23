@@ -1,0 +1,58 @@
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import type { Schema } from '@google/generative-ai';
+import { validateFactsResponse } from '../validation/validateJson';
+import type { FactsResponse } from '../anki/types';
+
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const MODEL_NAME = import.meta.env.VITE_GEMINI_MODEL_NAME; // or flash-lite when available, strict JSON enforcement
+
+const genAI = new GoogleGenerativeAI(API_KEY);
+
+const schema: Schema = {
+	type: SchemaType.OBJECT,
+	properties: {
+		sourceTitle: { type: SchemaType.STRING },
+		facts: {
+			type: SchemaType.ARRAY,
+			items: {
+				type: SchemaType.OBJECT,
+				properties: {
+					id: { type: SchemaType.STRING },
+					fact: { type: SchemaType.STRING },
+					context: { type: SchemaType.STRING },
+				},
+				required: ['id', 'fact'],
+			},
+		},
+	},
+	required: ['facts'],
+};
+
+export async function generateFacts(text: string, title?: string): Promise<FactsResponse> {
+	if (!API_KEY) throw new Error('Gemini API Key not found');
+
+	const model = genAI.getGenerativeModel({
+		model: MODEL_NAME,
+		generationConfig: {
+			responseMimeType: 'application/json',
+			responseSchema: schema,
+		},
+	});
+
+	const prompt = `
+Extract up to 10 important, atomic, testable facts from the text. Each fact must be one clear statement.
+Context/Title: ${title || 'Unknown'}
+Text:
+${text.slice(0, 25000)} // Truncate to avoid context limit issues just in case, though Flash handles more.
+  `;
+
+	try {
+		const result = await model.generateContent(prompt);
+		const responseText = result.response.text();
+		const json = JSON.parse(responseText);
+		return validateFactsResponse(json);
+	} catch (e) {
+		console.error('Gemini Facts Generation Failed', e);
+		throw e;
+	}
+}
