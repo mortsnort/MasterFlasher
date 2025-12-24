@@ -1,8 +1,8 @@
-# MasterFlasher
-
 <p align="center">
-  <img src="./logo.png" alt="MasterFlasher logo">
+  <img src="./logo.png" width="250" alt="MasterFlasher logo">
 </p>
+
+<h1 align="center">MasterFlasher</h1>
 
 MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid flashcards using Gemini. Share an article, get atomic facts, review the cards, and add the ones you want.
 
@@ -47,7 +47,7 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
    Create a `.env` file in the repository root:
    ```env
    VITE_GEMINI_API_KEY=your_gemini_api_key_here
-   VITE_GEMINI_MODEL_NAME=gemini-2.0-flash-lite-preview-02-05
+   VITE_GEMINI_MODEL_NAME=your_gemini_model (gemini-2.5-flash-lite)
    ```
 
 3. Sync Capacitor
