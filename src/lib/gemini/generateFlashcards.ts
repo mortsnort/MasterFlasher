@@ -42,12 +42,12 @@ export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsRespo
 
 	const factsJson = JSON.stringify(facts, null, 2);
 	const prompt = `
-Using these facts, generate a flash card for each fact. 
+Using these concepts, generate a flash card for each concept. 
 Front should be a clear question/prompt; back is the answer. 
 Add 1-4 short tags.
 Deck Name: MasterFlasher
 
-Facts:
+Concepts:
 ${factsJson}
   `;
 

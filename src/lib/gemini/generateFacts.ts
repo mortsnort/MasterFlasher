@@ -67,13 +67,13 @@ async function verifyAndGenerateFacts(text: string, title?: string): Promise<Fac
 	});
 
 	const prompt = `
-Extract explicit, relevant facts stated in the text.
+Extract explicit, relevant key concepts stated in the text.
 
 Constraints:
-1. Extract between 25 and 50 of the most important facts.
-2. Each fact must be a single declarative sentence.
-3. Maximum length per fact: 240 characters.
-4. No inference or interpretation - only explicit statements.
+1. Extract the most important key concepts.
+2. Each key concept must be a single declarative sentence.
+3. Maximum length per key concept: 240 characters.
+4. No inference or interpretation - only explicit concepts from the source material.
 
 Context/Title: ${title || 'Unknown'}
 Text:

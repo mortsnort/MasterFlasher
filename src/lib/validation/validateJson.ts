@@ -9,10 +9,10 @@ export function validateFactsResponse(data: any): FactsResponse {
 		throw new Error('Invalid Schema: "facts" must be an array');
 	}
 
-	if (data.facts.length > 10) {
+	if (data.facts.length > 50) {
 		// Soft warning or truncation could happen here, but for now we error or truncate
 		console.warn('Facts array exceeds limit of 10. Truncating.');
-		data.facts = data.facts.slice(0, 10);
+		data.facts = data.facts.slice(0, 50);
 	}
 
 	for (const f of data.facts) {
@@ -40,9 +40,9 @@ export function validateFlashcardsResponse(data: any): FlashcardsResponse {
 		throw new Error('Invalid Schema: "cards" array is empty');
 	}
 
-	if (data.cards.length > 20) {
-		console.warn('Cards array exceeds limit of 20. Truncating.');
-		data.cards = data.cards.slice(0, 20);
+	if (data.cards.length > 100) {
+		console.warn('Cards array exceeds limit of 100. Truncating.');
+		data.cards = data.cards.slice(0, 100);
 	}
 
 	for (const c of data.cards) {
