@@ -1,6 +1,8 @@
 # MasterFlasher
 
-![MasterFlasher logo](./logo.png)
+<p align="center">
+  <img src="./logo.png" alt="MasterFlasher logo">
+</p>
 
 MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid flashcards using Gemini. Share an article, get atomic facts, review the cards, and add the ones you want.
 
