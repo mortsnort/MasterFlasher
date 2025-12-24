@@ -1,87 +1,89 @@
 # MasterFlasher
 
-MasterFlasher is an Android application that serves as an intelligent bridge between your content consumption and AnkiDroid. It allows you to share text or URLs from any app, uses Gemini AI to extract atomic facts and generate high-quality flashcards, and then lets you selectively add them to your AnkiDroid decks.
+MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid flashcards using Gemini. Share an article, get atomic facts, review the cards, and add the ones you want.
 
 ## Features
 
-- **Share Integration**: Seamlessly share text or links from any Android app (Chrome, Twitter, Reddit, etc.) directly to MasterFlasher.
-- **Web Clipper**: When sharing URLs, MasterFlasher launches a distraction-free reader view to extract the main content before processing.
-- **AI-Powered Generation**: Uses Google's Gemini Flash Lite model to:
-  1.  Extract atomic, testable facts from the source text.
-  2.  Convert those facts into well-structured Anki flashcards (Front/Back/Tags).
-- **Manual Review**: Review generated cards before they enter your deck. Edit or discard cards that don't meet your standards.
-- **AnkiDroid Integration**: Direct integration with the AnkiDroid API to create decks, models, and notes without exporting/importing files.
-- **"Hot-Share" Support**: Works whether the app is cold-started or already running in the background.
+- Android share target for text and URLs
+- Readability-based web clipper for clean article extraction
+- Gemini-powered fact extraction and card generation
+- Manual review before adding cards
+- Direct AnkiDroid API integration (deck + model creation, note insertion)
 
 ## How It Works
 
-1.  **Capture**: The user shares content via the Android System Share Sheet.
-    -   *Text Share*: The text is processed directly.
-    -   *URL Share*: A native WebView opens, and `Readability.js` extracts the article content.
-2.  **Process**:
-    -   **Fact Extraction**: The raw content is sent to Gemini with a prompt to extract "atomic facts"—single, indivisible pieces of information.
-    -   **Card Generation**: These facts are fed back into Gemini to generate Flashcards with a Front, Back, and Tags.
-3.  **Review**: The user is presented with a list of generated cards.
-4.  **Export**: The user clicks "Add" on specific cards. The app uses the AnkiDroid Content Provider API to insert the note into the "MasterFlasher" deck.
+1. Share text or a URL to MasterFlasher from any Android app.
+2. URLs open a WebView reader; text is used directly.
+3. Gemini extracts atomic facts, then generates basic front/back cards.
+4. You review the cards and add selected ones to AnkiDroid.
 
-## Tech Stack
+## Project Structure
 
--   **Frontend**: React, Ionic Framework, TypeScript
--   **Build Tool**: Vite
--   **Native Runtime**: Capacitor
--   **AI**: Google Gemini API (Flash Lite model)
--   **Android Integration**:
-    -   Custom Capacitor Plugins (`AnkiDroid`, `ShareReceiver`, `WebClipper`)
-    -   Java / Android SDK
--   **Target App**: AnkiDroid (must be installed on the device)
+- `src/pages/ImportScreen.tsx` - Main flow UI (share, extract, generate, review, add)
+- `src/lib/gemini/` - Gemini prompts and response parsing
+- `src/lib/share/` - Share intent parsing
+- `src/plugins/` - Capacitor plugin interfaces
+- `android/` - Native Android app + Capacitor plugins
 
-## Installation & Setup
+## Requirements
 
-### Prerequisites
+- Node.js + npm
+- Android Studio (for device/emulator builds)
+- AnkiDroid installed on the device
+- Gemini API key
 
--   Node.js & npm
--   Android Studio (for building the APK)
--   AnkiDroid installed on your Android device/emulator.
-    -   *Note*: You must enable the API in AnkiDroid: `Settings -> Advanced -> Enable AnkiDroid API`.
+## Setup
 
-### Steps
+1. Install dependencies
+   ```bash
+   npm install
+   ```
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/yourusername/masterflasher.git
-    cd masterflasher
-    ```
+2. Configure environment
+   Create a `.env` file in the repository root:
+   ```env
+   VITE_GEMINI_API_KEY=your_gemini_api_key_here
+   VITE_GEMINI_MODEL_NAME=gemini-2.0-flash-lite-preview-02-05
+   ```
 
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+3. Sync Capacitor
+   ```bash
+   npx cap sync android
+   ```
 
-3.  **Configure Environment**
-    Create a `.env` file in the root directory:
-    ```env
-    VITE_GEMINI_API_KEY=your_gemini_api_key_here
-    VITE_GEMINI_MODEL_NAME=gemini-2.0-flash-lite-preview-02-05
-    ```
+4. Run on Android
+   ```bash
+   npx cap run android
+   ```
+   Or open Android Studio:
+   ```bash
+   npx cap open android
+   ```
 
-4.  **Sync Capacitor**
-    ```bash
-    npx cap sync android
-    ```
+## Usage
 
-5.  **Run on Android**
-    ```bash
-    npx cap run android
-    ```
-    Or open in Android Studio:
-    ```bash
-    npx cap open android
-    ```
+1. Share text or a URL to MasterFlasher from any Android app.
+2. If it is a URL, tap "Open & Extract".
+3. Review the generated cards and tap "Add" on the ones you want.
 
-## Contributing
+## Configuration Notes
 
-Contributions are welcome! Please follow the existing code style and document any new features or modules as per `agents.md`.
+- Deck name is hard-coded as `MasterFlasher`.
+- Model key used for cards is `com.snortstudios.masterflasher`.
+- Gemini output is expected to be strict JSON; failures will surface in the UI log.
+
+## Troubleshooting
+
+- "Gemini API Key not found": check `.env` and restart the dev server/build.
+- "AnkiDroid not available": ensure AnkiDroid is installed and the API is enabled.
+- Share does nothing: confirm the app is installed and chosen as a share target.
 
 ## License
 
-MIT
+This project is licensed under the  
+**Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**.
+
+- ✅ Free to use, modify, and share for **non-commercial** purposes
+- ❌ Commercial use is **not permitted** without permission
+
+See the [LICENSE](./LICENSE) file for details.
