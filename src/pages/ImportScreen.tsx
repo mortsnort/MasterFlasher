@@ -19,6 +19,7 @@ import {
 	IonLabel,
 	IonChip,
 	IonIcon,
+	useIonViewWillEnter,
 } from '@ionic/react';
 import { settingsOutline, keyOutline } from 'ionicons/icons';
 import ShareReceiver from '../plugins/ShareReceiver';
@@ -56,6 +57,33 @@ const ImportScreen: React.FC = () => {
 	const [log, setLog] = useState<string>('Waiting for share...');
 	const [generatedCards, setGeneratedCards] = useState<ReviewCard[]>([]);
 	const [errorMsg, setErrorMsg] = useState<string>('');
+
+	// Re-check config when returning to this page (e.g., from Settings)
+	useIonViewWillEnter(() => {
+		checkConfigAndUpdateState();
+	});
+
+	// Check config and update state accordingly
+	const checkConfigAndUpdateState = async () => {
+		// Only re-check if we're currently showing the NEEDS_CONFIG state
+		if (state === 'NEEDS_CONFIG') {
+			const hasConfig = await hasValidConfig();
+			if (hasConfig) {
+				// Config now exists - if we have pending share data, process it
+				if (shareData) {
+					setLog(`Received ${shareData.mode}: ${shareData.content.slice(0, 50)}...`);
+					if (shareData.mode === 'url') {
+						setState('READY_TO_EXTRACT');
+					} else {
+						startProcessing(shareData.content, 'Shared Text');
+					}
+				} else {
+					setLog('API key configured. Share content from another app to create flashcards.');
+					setState('IDLE');
+				}
+			}
+		}
+	};
 
 	useEffect(() => {
 		init();
