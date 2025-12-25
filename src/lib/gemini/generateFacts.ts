@@ -1,11 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import type { Schema } from '@google/generative-ai';
 import type { FactsResponse, Fact } from '../anki/types';
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL_NAME = import.meta.env.VITE_GEMINI_MODEL_NAME; // or flash-lite when available, strict JSON enforcement
-
-const genAI = new GoogleGenerativeAI(API_KEY);
+import { getGeminiConfig, createMissingConfigError } from '../settings/geminiConfig';
 
 const schema: Schema = {
 	type: SchemaType.OBJECT,
@@ -55,10 +51,15 @@ function generateId(): string {
 }
 
 async function verifyAndGenerateFacts(text: string, title?: string): Promise<Fact[]> {
-	if (!API_KEY) throw new Error('Gemini API Key not found');
+	// Get config from secure storage or env
+	const config = await getGeminiConfig();
+	if (!config) {
+		throw createMissingConfigError();
+	}
 
+	const genAI = new GoogleGenerativeAI(config.apiKey);
 	const model = genAI.getGenerativeModel({
-		model: MODEL_NAME,
+		model: config.modelName,
 		generationConfig: {
 			responseMimeType: 'application/json',
 			responseSchema: schema,
@@ -92,11 +93,11 @@ ${text}
 		}
 
 		// Map to Fact objects, assigning IDs client-side
-		return json.facts.map((f: any) => ({
+		return json.facts.map((f: { fact: string }) => ({
 			id: generateId(),
 			fact: f.fact,
 			// context removed per user request
-		})).filter((f: any) => f.fact && typeof f.fact === 'string');
+		})).filter((f: { id: string; fact: string }) => f.fact && typeof f.fact === 'string');
 
 	} catch (e) {
 		console.error('Gemini Facts Generation Failed for chunk', e);

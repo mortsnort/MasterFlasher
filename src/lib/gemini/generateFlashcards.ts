@@ -2,11 +2,7 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import type { Schema } from '@google/generative-ai';
 import { validateFlashcardsResponse } from '../validation/validateJson';
 import type { Fact, FlashcardsResponse } from '../anki/types';
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL_NAME = import.meta.env.VITE_GEMINI_MODEL_NAME;
-
-const genAI = new GoogleGenerativeAI(API_KEY);
+import { getGeminiConfig, createMissingConfigError } from '../settings/geminiConfig';
 
 const schema: Schema = {
 	type: SchemaType.OBJECT,
@@ -29,10 +25,15 @@ const schema: Schema = {
 };
 
 export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsResponse> {
-	if (!API_KEY) throw new Error('Gemini API Key not found');
+	// Get config from secure storage or env
+	const config = await getGeminiConfig();
+	if (!config) {
+		throw createMissingConfigError();
+	}
 
+	const genAI = new GoogleGenerativeAI(config.apiKey);
 	const model = genAI.getGenerativeModel({
-		model: MODEL_NAME,
+		model: config.modelName,
 		generationConfig: {
 			responseMimeType: 'application/json',
 			responseSchema: schema,
@@ -42,8 +43,8 @@ export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsRespo
 
 	const factsJson = JSON.stringify(facts, null, 2);
 	const prompt = `
-Using these concepts, generate a flash card for each concept. 
-Front should be a clear question/prompt; back is the answer. 
+Using these concepts, generate a flash card for each concept.
+Front should be a clear question/prompt; back is the answer.
 Add 1-4 short tags.
 Deck Name: MasterFlasher
 
@@ -58,7 +59,7 @@ ${factsJson}
 
 		// Deterministically add the type 'basic' to satisfy validation and typing
 		if (json.cards && Array.isArray(json.cards)) {
-			json.cards = json.cards.map((c: any) => ({ ...c, type: 'basic' }));
+			json.cards = json.cards.map((c: { front: string; back: string; tags?: string[] }) => ({ ...c, type: 'basic' }));
 		}
 
 		return validateFlashcardsResponse(json);

@@ -2,6 +2,7 @@ import { Redirect, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import ImportScreen from './pages/ImportScreen';
+import SettingsScreen from './pages/SettingsScreen';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -27,6 +28,9 @@ const App: React.FC = () => (
       <IonRouterOutlet>
         <Route exact path="/import">
           <ImportScreen />
+        </Route>
+        <Route exact path="/settings">
+          <SettingsScreen />
         </Route>
         <Route exact path="/">
           <Redirect to="/import" />

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import {
 	IonPage,
 	IonContent,
 	IonHeader,
 	IonToolbar,
 	IonTitle,
+	IonButtons,
 	IonButton,
 	IonProgressBar,
 	IonText,
@@ -16,12 +18,15 @@ import {
 	IonItem,
 	IonLabel,
 	IonChip,
+	IonIcon,
 } from '@ionic/react';
+import { settingsOutline, keyOutline } from 'ionicons/icons';
 import ShareReceiver from '../plugins/ShareReceiver';
 import { parseIncomingShare } from '../lib/share/parseIncoming';
 import type { IncomingShare } from '../lib/share/parseIncoming';
 import { generateFacts } from '../lib/gemini/generateFacts';
 import { generateFlashcards } from '../lib/gemini/generateFlashcards';
+import { hasValidConfig } from '../lib/settings/geminiConfig';
 import WebClipper from '../plugins/WebClipper';
 import AnkiDroid from '../plugins/AnkiDroid';
 import type { Flashcard } from '../lib/anki/types';
@@ -29,6 +34,7 @@ import type { Flashcard } from '../lib/anki/types';
 type UIState =
 	| 'IDLE'
 	| 'ANALYZING'
+	| 'NEEDS_CONFIG' // New state for missing API key
 	| 'READY_TO_EXTRACT' // For URL flow
 	| 'EXTRACTING'
 	| 'GENERATING_FACTS'
@@ -44,21 +50,28 @@ type ReviewCard = Flashcard & {
 };
 
 const ImportScreen: React.FC = () => {
+	const history = useHistory();
 	const [state, setState] = useState<UIState | 'REVIEW_CARDS'>('IDLE');
 	const [shareData, setShareData] = useState<IncomingShare | null>(null);
 	const [log, setLog] = useState<string>('Waiting for share...');
 	const [generatedCards, setGeneratedCards] = useState<ReviewCard[]>([]);
 	const [errorMsg, setErrorMsg] = useState<string>('');
 
-	// ... 
-	// (Import ShareReceiver etc. remains)
-
 	useEffect(() => {
 		init();
 
-		const listener = (ShareReceiver as any).addListener('shareReceived', (data: any) => {
+		const listener = (ShareReceiver as any).addListener('shareReceived', async (data: any) => {
 			console.log('Share received while running:', data);
 			if (data.value && data.mode) {
+				// Check config before processing
+				const hasConfig = await hasValidConfig();
+				if (!hasConfig) {
+					setShareData({ mode: data.mode, content: data.value });
+					setLog('API key not configured. Please set up your Gemini API key first.');
+					setState('NEEDS_CONFIG');
+					return;
+				}
+				
 				setShareData({ mode: data.mode, content: data.value });
 				setLog(`Received new ${data.mode}: ${data.value.slice(0, 50)}...`);
 				if (data.mode === 'url') {
@@ -76,10 +89,21 @@ const ImportScreen: React.FC = () => {
 
 	const init = async () => {
 		setState('ANALYZING');
+		
+		// Check if API key is configured
+		const hasConfig = await hasValidConfig();
+		
 		const share = await parseIncomingShare();
 		if (share) {
 			setShareData(share);
-			// ... existing init logic ...
+			
+			// If no config, prompt user to set it up
+			if (!hasConfig) {
+				setLog('API key not configured. Please set up your Gemini API key first.');
+				setState('NEEDS_CONFIG');
+				return;
+			}
+			
 			setLog(`Received ${share.mode}: ${share.content.slice(0, 50)}...`);
 			if (share.mode === 'url') {
 				setState('READY_TO_EXTRACT');
@@ -87,9 +111,19 @@ const ImportScreen: React.FC = () => {
 				startProcessing(share.content, 'Shared Text');
 			}
 		} else {
-			setLog('No share data found. App likely launched directly.');
-			setState('IDLE');
+			// No share data - check if config exists
+			if (!hasConfig) {
+				setLog('Welcome! Please configure your Gemini API key to get started.');
+				setState('NEEDS_CONFIG');
+			} else {
+				setLog('No share data found. Share content from another app to create flashcards.');
+				setState('IDLE');
+			}
 		}
+	};
+
+	const navigateToSettings = () => {
+		history.push('/settings');
 	};
 
 	const handleExtract = async () => {
@@ -185,6 +219,11 @@ const ImportScreen: React.FC = () => {
 			<IonHeader>
 				<IonToolbar>
 					<IonTitle>MasterFlasher Import</IonTitle>
+					<IonButtons slot="end">
+						<IonButton onClick={navigateToSettings}>
+							<IonIcon slot="icon-only" icon={settingsOutline} />
+						</IonButton>
+					</IonButtons>
 				</IonToolbar>
 			</IonHeader>
 			<IonContent className="ion-padding">
@@ -198,6 +237,38 @@ const ImportScreen: React.FC = () => {
 						<IonProgressBar type="indeterminate" />
 					)}
 				</div>
+
+				{/* API Key Configuration Required */}
+				{state === 'NEEDS_CONFIG' && (
+					<IonCard>
+						<IonCardHeader>
+							<IonCardTitle>
+								<IonIcon icon={keyOutline} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+								API Key Required
+							</IonCardTitle>
+						</IonCardHeader>
+						<IonCardContent>
+							<p>
+								To generate flashcards, you need to configure your Gemini API key.
+								You can get a free API key from{' '}
+								<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
+									Google AI Studio
+								</a>.
+							</p>
+							<IonButton expand="block" onClick={navigateToSettings} style={{ marginTop: 16 }}>
+								<IonIcon slot="start" icon={settingsOutline} />
+								Configure API Key
+							</IonButton>
+							{shareData && (
+								<IonText color="medium">
+									<p style={{ marginTop: 12, fontSize: '0.9em' }}>
+										Your shared content will be processed after configuration.
+									</p>
+								</IonText>
+							)}
+						</IonCardContent>
+					</IonCard>
+				)}
 
 				{/* URL Action */}
 				{state === 'READY_TO_EXTRACT' && (

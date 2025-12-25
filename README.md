@@ -43,12 +43,14 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
    npm install
    ```
 
-2. Configure environment
+2. Configure environment (Development only)
    Create a `.env` file in the repository root:
    ```env
    VITE_GEMINI_API_KEY=your_gemini_api_key_here
-   VITE_GEMINI_MODEL_NAME=your_gemini_model (gemini-2.5-flash-lite)
+   VITE_GEMINI_MODEL_NAME=gemini-2.5-flash-lite
    ```
+   
+   > **Note**: In production, users configure their own API key via the Settings screen. The `.env` file is only needed for development.
 
 3. Sync Capacitor
    ```bash
@@ -75,10 +77,25 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 - Deck name is hard-coded as `MasterFlasher`.
 - Model key used for cards is `com.snortstudios.masterflasher`.
 - Gemini output is expected to be strict JSON; failures will surface in the UI log.
+- Default Gemini model is `gemini-2.5-flash-lite` when not specified.
+
+## API Key Configuration
+
+### Development Mode
+Uses `.env` file variables (`VITE_GEMINI_API_KEY`, `VITE_GEMINI_MODEL_NAME`).
+
+### Production Mode
+Users configure their own Gemini API key via the in-app Settings screen:
+1. Tap the settings icon (⚙️) in the header
+2. Enter your Gemini API key (get one free from [Google AI Studio](https://aistudio.google.com/app/apikey))
+3. Optionally specify a different Gemini model
+4. Tap "Save Settings"
+
+API keys are stored securely using platform-native encryption (Android KeyStore).
 
 ## Troubleshooting
 
-- "Gemini API Key not found": check `.env` and restart the dev server/build.
+- "Gemini API Key not configured": In production, open Settings to enter your API key. In development, check `.env` and restart the dev server/build.
 - "AnkiDroid not available": ensure AnkiDroid is installed and the API is enabled.
 - Share does nothing: confirm the app is installed and chosen as a share target.
 
