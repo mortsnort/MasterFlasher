@@ -22,6 +22,7 @@ import {
 	IonProgressBar,
 	IonChip,
 	IonSpinner,
+	IonAlert,
 } from '@ionic/react';
 import {
 	linkOutline,
@@ -32,6 +33,7 @@ import {
 	alertCircle,
 	keyOutline,
 	settingsOutline,
+	trashOutline,
 } from 'ionicons/icons';
 import Inbox from '../plugins/Inbox';
 import type { InboxEntry, GeneratedCard } from '../plugins/Inbox';
@@ -66,6 +68,7 @@ const EntryDetailScreen: React.FC = () => {
 	const [deckName, setDeckName] = useState('MasterFlasher');
 	const [log, setLog] = useState('Loading...');
 	const [errorMsg, setErrorMsg] = useState('');
+	const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
 	/**
 	 * Load entry and its cards from database
@@ -116,6 +119,22 @@ const EntryDetailScreen: React.FC = () => {
 	 */
 	const navigateToSettings = () => {
 		history.push('/settings');
+	};
+
+	/**
+	 * Delete the current entry and navigate back
+	 */
+	const handleDeleteEntry = async () => {
+		if (!entry) return;
+		
+		try {
+			await Inbox.deleteEntry({ id: entry.id });
+			history.replace('/inbox');
+		} catch (e) {
+			console.error('Failed to delete entry:', e);
+			setErrorMsg('Failed to delete entry');
+			setState('ERROR');
+		}
 	};
 
 	/**
@@ -286,9 +305,37 @@ const EntryDetailScreen: React.FC = () => {
 					<IonTitle>
 						{entry?.title || (entry?.contentType === 'url' ? 'URL Entry' : 'Text Entry')}
 					</IonTitle>
+					<IonButtons slot="end">
+						<IonButton
+							color="danger"
+							onClick={() => setShowDeleteAlert(true)}
+							disabled={state === 'LOADING'}
+						>
+							<IonIcon slot="icon-only" icon={trashOutline} />
+						</IonButton>
+					</IonButtons>
 				</IonToolbar>
 			</IonHeader>
 			<IonContent className="ion-padding">
+				{/* Delete Confirmation Alert */}
+				<IonAlert
+					isOpen={showDeleteAlert}
+					onDidDismiss={() => setShowDeleteAlert(false)}
+					header="Delete Entry?"
+					message="This will permanently delete this entry and any generated cards. This action cannot be undone."
+					buttons={[
+						{
+							text: 'Cancel',
+							role: 'cancel',
+						},
+						{
+							text: 'Delete',
+							role: 'destructive',
+							handler: handleDeleteEntry,
+						},
+					]}
+				/>
+
 				{/* Status/Log Area */}
 				<div style={{ marginBottom: 20 }}>
 					<IonText color="medium">
