@@ -183,9 +183,12 @@ const EntryDetailScreen: React.FC = () => {
 		const textToProcess = entry.extractedText || entry.content;
 		const title = entry.title || undefined;
 		
+		// Use default deck name if empty
+		const finalDeckName = deckName.trim() || 'MasterFlasher';
+		
 		try {
 			// Save deck name first
-			await Inbox.updateDeckName({ entryId: entry.id, deckName });
+			await Inbox.updateDeckName({ entryId: entry.id, deckName: finalDeckName });
 			
 			setState('GENERATING_FACTS');
 			setLog('Generating facts with Gemini...');
@@ -220,7 +223,7 @@ const EntryDetailScreen: React.FC = () => {
 				uiStatus: 'idle'
 			}));
 			setCards(reviewCards);
-			setEntry({ ...entry, isLocked: true, deckName });
+			setEntry({ ...entry, isLocked: true, deckName: finalDeckName });
 			
 			setLog(`Generated ${cardsResp.cards.length} cards. Ready for review.`);
 			setState('REVIEW_CARDS');
@@ -557,7 +560,7 @@ const EntryDetailScreen: React.FC = () => {
 										<IonLabel position="stacked">Deck Name</IonLabel>
 										<IonInput
 											value={deckName}
-											onIonInput={(e) => setDeckName(e.detail.value || 'MasterFlasher')}
+											onIonInput={(e) => setDeckName(e.detail.value ?? '')}
 											placeholder="MasterFlasher"
 										/>
 									</IonItem>
