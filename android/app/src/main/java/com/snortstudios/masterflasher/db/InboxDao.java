@@ -9,10 +9,30 @@ import androidx.room.Update;
 import java.util.List;
 
 /**
- * Data Access Object for inbox entries and generated cards.
+ * Data Access Object for inbox entries, generated cards, and app settings.
  */
 @Dao
 public interface InboxDao {
+    
+    // ==================== Settings Operations ====================
+    
+    /**
+     * Get a setting value by key
+     */
+    @Query("SELECT * FROM app_settings WHERE key = :key")
+    AppSetting getSetting(String key);
+    
+    /**
+     * Insert or update a setting
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void setSetting(AppSetting setting);
+    
+    /**
+     * Delete a setting by key
+     */
+    @Query("DELETE FROM app_settings WHERE key = :key")
+    void deleteSetting(String key);
     
     // ==================== Entry Operations ====================
     

@@ -2,6 +2,8 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import type { Schema } from '@google/generative-ai';
 import type { FactsResponse, Fact } from '../anki/types';
 import { getGeminiConfig, createMissingConfigError } from '../settings/geminiConfig';
+import { getFactExtractionPrompt } from '../settings/promptConfig';
+import { FACT_EXTRACTION_SYSTEM_CONSTRAINTS } from '../settings/defaultPrompts';
 
 const schema: Schema = {
 	type: SchemaType.OBJECT,
@@ -22,8 +24,9 @@ const schema: Schema = {
 };
 
 // Helper: Split text into chunks at sentence boundaries
-// Reduced from 15k to 8k to prevent Gemini output truncation with dense content
-function chunkText(text: string, chunkSize = 8000): string[] {
+// Reduced to 4000 chars for natural content-based fact limiting
+// Smaller chunks = fewer extractable concepts = natural output limits
+function chunkText(text: string, chunkSize = 4000): string[] {
 	if (text.length <= chunkSize) return [text];
 
 	const chunks: string[] = [];
@@ -51,7 +54,21 @@ function generateId(): string {
 	return crypto.randomUUID();
 }
 
-async function verifyAndGenerateFacts(text: string, title?: string): Promise<Fact[]> {
+/**
+ * Build the complete prompt by combining:
+ * 1. User's custom prompt (or default)
+ * 2. System constraints (always appended, not user-editable)
+ * 3. Dynamic content (title and text)
+ */
+function buildFactExtractionPrompt(userPrompt: string, text: string, title?: string): string {
+	return `${userPrompt}${FACT_EXTRACTION_SYSTEM_CONSTRAINTS}
+
+Context/Title: ${title || 'Unknown'}
+Text:
+${text}`;
+}
+
+async function verifyAndGenerateFacts(text: string, title: string | undefined, userPrompt: string): Promise<Fact[]> {
 	// Get config from secure storage or env
 	const config = await getGeminiConfig();
 	if (!config) {
@@ -68,20 +85,7 @@ async function verifyAndGenerateFacts(text: string, title?: string): Promise<Fac
 		},
 	});
 
-	const prompt = `
-Extract explicit, relevant key concepts stated in the text.
-
-Constraints:
-1. Extract up to 10 of the most important key concepts (maximum 10).
-2. Each key concept must be a single declarative sentence.
-3. Maximum length per key concept: 240 characters.
-4. No inference or interpretation - only explicit concepts from the source material.
-5. Prioritize the most significant and unique concepts.
-
-Context/Title: ${title || 'Unknown'}
-Text:
-${text}
-	 `;
+	const prompt = buildFactExtractionPrompt(userPrompt, text, title);
 
 	try {
 		const result = await model.generateContent(prompt);
@@ -108,22 +112,23 @@ ${text}
 }
 
 export async function generateFacts(text: string, title?: string): Promise<FactsResponse> {
-	// 1. Chunk the text
-	const chunks = chunkText(text);
-	console.log(`Processing ${chunks.length} chunks...`);
+	// 1. Load the user's custom prompt (or default)
+	const userPrompt = await getFactExtractionPrompt();
 
-	// 2. Process chunks (concurrently or sequentially? Sequential to respect rate limits if needed, but parallel is faster)
-	// Using Promise.all for speed, assuming API limits allow. Flash Lite has high TPM.
+	// 2. Chunk the text into smaller pieces for natural content-based limiting
+	const chunks = chunkText(text);
+	console.log(`Processing ${chunks.length} chunks with custom prompt...`);
+
+	// 3. Process chunks (concurrently for speed, Flash Lite has high TPM)
 	const results = await Promise.all(
-		chunks.map((chunk) => verifyAndGenerateFacts(chunk, title))
+		chunks.map((chunk) => verifyAndGenerateFacts(chunk, title, userPrompt))
 	);
 
-	// 3. Merge results
+	// 4. Merge results from all chunks
 	const allFacts = results.flat();
 
-	// 4. Final limit check (optional, but good to keep total manageable)
-	// If specific per-chunk limits are adhered to, total should be reasonable. 
-	// We do NOT strictly truncate here to strict 10 items like before, as user asked for 25-50 scale.
+	// 5. Return combined results
+	// Smaller chunks naturally limit facts per chunk, no arbitrary truncation needed
 
 	return {
 		sourceTitle: title,

@@ -3,6 +3,8 @@ import type { Schema } from '@google/generative-ai';
 import { validateFlashcardsResponse } from '../validation/validateJson';
 import type { Fact, FlashcardsResponse } from '../anki/types';
 import { getGeminiConfig, createMissingConfigError } from '../settings/geminiConfig';
+import { getFlashcardCreationPrompt } from '../settings/promptConfig';
+import { FLASHCARD_CREATION_SYSTEM_CONSTRAINTS } from '../settings/defaultPrompts';
 
 const schema: Schema = {
 	type: SchemaType.OBJECT,
@@ -24,12 +26,28 @@ const schema: Schema = {
 	required: ['deck', 'cards'],
 };
 
+/**
+ * Build the complete prompt by combining:
+ * 1. User's custom prompt (or default)
+ * 2. System constraints (always appended, not user-editable)
+ * 3. Dynamic content (concepts JSON)
+ */
+function buildFlashcardCreationPrompt(userPrompt: string, factsJson: string): string {
+	return `${userPrompt}${FLASHCARD_CREATION_SYSTEM_CONSTRAINTS}
+
+Concepts:
+${factsJson}`;
+}
+
 export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsResponse> {
 	// Get config from secure storage or env
 	const config = await getGeminiConfig();
 	if (!config) {
 		throw createMissingConfigError();
 	}
+
+	// Load the user's custom prompt (or default)
+	const userPrompt = await getFlashcardCreationPrompt();
 
 	const genAI = new GoogleGenerativeAI(config.apiKey);
 	const model = genAI.getGenerativeModel({
@@ -42,15 +60,7 @@ export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsRespo
 	});
 
 	const factsJson = JSON.stringify(facts, null, 2);
-	const prompt = `
-Using these concepts, generate a flash card for each concept.
-Front should be a clear question/prompt; back is the answer.
-Add 1-4 short tags.
-Deck Name: MasterFlasher
-
-Concepts:
-${factsJson}
-  `;
+	const prompt = buildFlashcardCreationPrompt(userPrompt, factsJson);
 
 	try {
 		const result = await model.generateContent(prompt);

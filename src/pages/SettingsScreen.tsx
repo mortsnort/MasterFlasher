@@ -19,8 +19,11 @@ import {
 	IonCardContent,
 	IonIcon,
 	IonSpinner,
+	IonAccordion,
+	IonAccordionGroup,
+	IonTextarea,
 } from '@ionic/react';
-import { keyOutline, sparklesOutline, trashOutline, checkmarkCircleOutline } from 'ionicons/icons';
+import { keyOutline, sparklesOutline, trashOutline, checkmarkCircleOutline, refreshOutline, documentTextOutline, flashOutline } from 'ionicons/icons';
 import {
 	getGeminiApiKey,
 	getGeminiModel,
@@ -29,6 +32,18 @@ import {
 	clearGeminiSettings,
 } from '../lib/settings/secureStorage';
 import { DEFAULT_MODEL } from '../lib/settings/geminiConfig';
+import {
+	getFactExtractionPrompt,
+	setFactExtractionPrompt,
+	resetFactExtractionPrompt,
+	getFlashcardCreationPrompt,
+	setFlashcardCreationPrompt,
+	resetFlashcardCreationPrompt,
+} from '../lib/settings/promptConfig';
+import {
+	DEFAULT_FACT_EXTRACTION_PROMPT,
+	DEFAULT_FLASHCARD_CREATION_PROMPT,
+} from '../lib/settings/defaultPrompts';
 
 type SaveState = 'idle' | 'saving' | 'success' | 'error';
 
@@ -41,6 +56,11 @@ const SettingsScreen: React.FC = () => {
 	const [errorMessage, setErrorMessage] = useState('');
 	const [hasExistingKey, setHasExistingKey] = useState(false);
 
+	// Custom prompt states
+	const [factExtractionPrompt, setFactExtractionPromptState] = useState('');
+	const [flashcardCreationPrompt, setFlashcardCreationPromptState] = useState('');
+	const [promptsModified, setPromptsModified] = useState(false);
+
 	useEffect(() => {
 		loadSettings();
 	}, []);
@@ -48,16 +68,23 @@ const SettingsScreen: React.FC = () => {
 	const loadSettings = async () => {
 		setLoading(true);
 		try {
+			// Load API settings
 			const storedKey = await getGeminiApiKey();
 			const storedModel = await getGeminiModel();
 			
 			if (storedKey) {
-				// Show masked key for security
 				setApiKey(storedKey);
 				setHasExistingKey(true);
 			}
 			
 			setModelName(storedModel || '');
+
+			// Load custom prompts
+			const factPrompt = await getFactExtractionPrompt();
+			const flashcardPrompt = await getFlashcardCreationPrompt();
+			
+			setFactExtractionPromptState(factPrompt);
+			setFlashcardCreationPromptState(flashcardPrompt);
 		} catch (error) {
 			console.error('Failed to load settings:', error);
 		} finally {
@@ -90,8 +117,22 @@ const SettingsScreen: React.FC = () => {
 				throw new Error('Failed to save model name');
 			}
 
+			// Save custom prompts if modified
+			if (promptsModified) {
+				const factPromptSuccess = await setFactExtractionPrompt(factExtractionPrompt);
+				if (!factPromptSuccess) {
+					throw new Error('Failed to save fact extraction prompt');
+				}
+
+				const flashcardPromptSuccess = await setFlashcardCreationPrompt(flashcardCreationPrompt);
+				if (!flashcardPromptSuccess) {
+					throw new Error('Failed to save flashcard creation prompt');
+				}
+			}
+
 			setSaveState('success');
 			setHasExistingKey(true);
+			setPromptsModified(false);
 			
 			// Navigate back after short delay to show success state
 			setTimeout(() => {
@@ -117,6 +158,22 @@ const SettingsScreen: React.FC = () => {
 			setErrorMessage('Failed to clear settings');
 			setSaveState('error');
 		}
+	};
+
+	const handleResetFactPrompt = async () => {
+		setFactExtractionPromptState(DEFAULT_FACT_EXTRACTION_PROMPT);
+		setPromptsModified(true);
+		setSaveState('idle');
+		// Actually reset in storage
+		await resetFactExtractionPrompt();
+	};
+
+	const handleResetFlashcardPrompt = async () => {
+		setFlashcardCreationPromptState(DEFAULT_FLASHCARD_CREATION_PROMPT);
+		setPromptsModified(true);
+		setSaveState('idle');
+		// Actually reset in storage
+		await resetFlashcardCreationPrompt();
 	};
 
 	const getMaskedKey = (key: string): string => {
@@ -155,6 +212,7 @@ const SettingsScreen: React.FC = () => {
 				</IonToolbar>
 			</IonHeader>
 			<IonContent className="ion-padding">
+				{/* API Configuration Section */}
 				<IonCard>
 					<IonCardContent>
 						<IonText>
@@ -210,9 +268,106 @@ const SettingsScreen: React.FC = () => {
 					</IonItem>
 				</IonList>
 
+				{/* Custom Prompts Section */}
+				<IonCard style={{ marginTop: '1rem' }}>
+					<IonCardContent>
+						<IonText>
+							<h2 style={{ marginTop: 0 }}>Custom Prompts</h2>
+							<p>
+								Customize how facts are extracted and flashcards are generated.
+								System constraints are automatically appended to ensure proper output format.
+							</p>
+						</IonText>
+					</IonCardContent>
+				</IonCard>
+
+				<IonAccordionGroup>
+					{/* Fact Extraction Prompt */}
+					<IonAccordion value="factPrompt">
+						<IonItem slot="header" color="light">
+							<IonIcon icon={documentTextOutline} slot="start" />
+							<IonLabel>Fact Extraction Prompt</IonLabel>
+						</IonItem>
+						<div className="ion-padding" slot="content">
+							<IonTextarea
+								value={factExtractionPrompt}
+								placeholder={DEFAULT_FACT_EXTRACTION_PROMPT}
+								autoGrow={true}
+								rows={8}
+								onIonInput={(e) => {
+									setFactExtractionPromptState(e.detail.value || '');
+									setPromptsModified(true);
+									setSaveState('idle');
+								}}
+								style={{ 
+									border: '1px solid var(--ion-color-medium)',
+									borderRadius: '8px',
+									padding: '8px',
+									minHeight: '150px',
+									fontFamily: 'monospace',
+									fontSize: '14px',
+								}}
+							/>
+							<IonButton
+								fill="outline"
+								size="small"
+								onClick={handleResetFactPrompt}
+								style={{ marginTop: '0.5rem' }}
+							>
+								<IonIcon icon={refreshOutline} slot="start" />
+								Reset to Default
+							</IonButton>
+							<IonNote style={{ display: 'block', marginTop: '0.5rem' }}>
+								Controls how key concepts are extracted from text. The title and text content are automatically appended.
+							</IonNote>
+						</div>
+					</IonAccordion>
+
+					{/* Flashcard Creation Prompt */}
+					<IonAccordion value="flashcardPrompt">
+						<IonItem slot="header" color="light">
+							<IonIcon icon={flashOutline} slot="start" />
+							<IonLabel>Flashcard Creation Prompt</IonLabel>
+						</IonItem>
+						<div className="ion-padding" slot="content">
+							<IonTextarea
+								value={flashcardCreationPrompt}
+								placeholder={DEFAULT_FLASHCARD_CREATION_PROMPT}
+								autoGrow={true}
+								rows={6}
+								onIonInput={(e) => {
+									setFlashcardCreationPromptState(e.detail.value || '');
+									setPromptsModified(true);
+									setSaveState('idle');
+								}}
+								style={{ 
+									border: '1px solid var(--ion-color-medium)',
+									borderRadius: '8px',
+									padding: '8px',
+									minHeight: '120px',
+									fontFamily: 'monospace',
+									fontSize: '14px',
+								}}
+							/>
+							<IonButton
+								fill="outline"
+								size="small"
+								onClick={handleResetFlashcardPrompt}
+								style={{ marginTop: '0.5rem' }}
+							>
+								<IonIcon icon={refreshOutline} slot="start" />
+								Reset to Default
+							</IonButton>
+							<IonNote style={{ display: 'block', marginTop: '0.5rem' }}>
+								Controls how flashcards are generated from concepts. The concepts JSON is automatically appended.
+							</IonNote>
+						</div>
+					</IonAccordion>
+				</IonAccordionGroup>
+
 				{/* Error Message */}
 				{saveState === 'error' && errorMessage && (
-					<IonCard color="danger">
+					<IonCard color="danger" style={{ marginTop: '1rem' }}>
 						<IonCardContent>
 							<IonText color="light">{errorMessage}</IonText>
 						</IonCardContent>
@@ -221,7 +376,7 @@ const SettingsScreen: React.FC = () => {
 
 				{/* Success Message */}
 				{saveState === 'success' && (
-					<IonCard color="success">
+					<IonCard color="success" style={{ marginTop: '1rem' }}>
 						<IonCardContent>
 							<IonText color="light">
 								<IonIcon icon={checkmarkCircleOutline} /> Settings saved successfully!
