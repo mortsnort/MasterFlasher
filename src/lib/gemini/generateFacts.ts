@@ -21,8 +21,9 @@ const schema: Schema = {
 	required: ['facts'],
 };
 
-// Helper: Split text into chunks of ~15k characters at sentence boundaries
-function chunkText(text: string, chunkSize = 15000): string[] {
+// Helper: Split text into chunks at sentence boundaries
+// Reduced from 15k to 8k to prevent Gemini output truncation with dense content
+function chunkText(text: string, chunkSize = 8000): string[] {
 	if (text.length <= chunkSize) return [text];
 
 	const chunks: string[] = [];
@@ -71,15 +72,16 @@ async function verifyAndGenerateFacts(text: string, title?: string): Promise<Fac
 Extract explicit, relevant key concepts stated in the text.
 
 Constraints:
-1. Extract the most important key concepts.
+1. Extract up to 10 of the most important key concepts (maximum 10).
 2. Each key concept must be a single declarative sentence.
 3. Maximum length per key concept: 240 characters.
 4. No inference or interpretation - only explicit concepts from the source material.
+5. Prioritize the most significant and unique concepts.
 
 Context/Title: ${title || 'Unknown'}
 Text:
 ${text}
-  `;
+	 `;
 
 	try {
 		const result = await model.generateContent(prompt);
