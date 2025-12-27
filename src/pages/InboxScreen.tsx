@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
 	IonPage,
@@ -23,6 +23,7 @@ import {
 	useIonViewWillEnter,
 } from '@ionic/react';
 import type { RefresherEventDetail } from '@ionic/react';
+import { App } from '@capacitor/app';
 import {
 	settingsOutline,
 	linkOutline,
@@ -84,6 +85,21 @@ const InboxScreen: React.FC = () => {
 	useIonViewWillEnter(() => {
 		loadEntries();
 	});
+
+	// Listen for app state changes to refresh when coming to foreground
+	useEffect(() => {
+		const listener = App.addListener('appStateChange', ({ isActive }) => {
+			if (isActive) {
+				// App came to foreground - refresh the inbox
+				console.log('App resumed, refreshing inbox...');
+				loadEntries();
+			}
+		});
+
+		return () => {
+			listener.then(handle => handle.remove());
+		};
+	}, [loadEntries]);
 
 	/**
 	 * Handle pull-to-refresh
