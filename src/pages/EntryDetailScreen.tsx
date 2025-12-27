@@ -240,10 +240,32 @@ const EntryDetailScreen: React.FC = () => {
 			const factsResp = await generateFacts(textToProcess, title);
 			setLog(`Generated ${factsResp.facts.length} facts`);
 			
+			// Check if no facts were extracted
+			if (factsResp.facts.length === 0) {
+				setErrorMsg(
+					'No key concepts could be extracted from this content. ' +
+					'This may happen with very short text, technical content, or documents that are mostly images. ' +
+					'Try a different source or check if the content is extractable.'
+				);
+				setState('ERROR');
+				return;
+			}
+			
 			setState('GENERATING_CARDS');
 			setLog('Generating flashcards...');
 			
 			const cardsResp = await generateFlashcards(factsResp.facts);
+			
+			// Check if no cards were generated
+			if (cardsResp.cards.length === 0) {
+				setErrorMsg(
+					'No flashcards could be generated from the extracted concepts. ' +
+					'This may happen if the content is too abstract or lacks specific facts. ' +
+					'Try adjusting the source content or custom prompts in Settings.'
+				);
+				setState('ERROR');
+				return;
+			}
 			
 			// Create card objects with IDs
 			const newCards: Omit<GeneratedCard, 'entryId'>[] = cardsResp.cards.map((c, i) => ({

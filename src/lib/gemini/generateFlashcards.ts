@@ -40,6 +40,16 @@ ${factsJson}`;
 }
 
 export async function generateFlashcards(facts: Fact[]): Promise<FlashcardsResponse> {
+	// Early return if no facts to process - avoids unnecessary API call
+	// and potential errors from Gemini returning empty/invalid JSON
+	if (!facts || facts.length === 0) {
+		console.log('No facts provided, returning empty flashcards response');
+		return {
+			deck: 'MasterFlasher',
+			cards: [],
+		};
+	}
+
 	// Get config from secure storage or env
 	const config = await getGeminiConfig();
 	if (!config) {
