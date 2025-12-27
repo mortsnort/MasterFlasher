@@ -40,7 +40,9 @@ The inbox feature transforms MasterFlasher from a single-share flow into an inbo
 4. User sets deck name
 5. User taps "Generate Cards" → Gemini API generates facts → flashcards
 6. Cards are saved to database, entry is locked
-7. User reviews and adds cards to AnkiDroid one by one
+7. User reviews cards and can:
+   - Add cards individually via the "Add" button on each card
+   - Add all pending cards at once via the "Add All to Anki" button
 8. When all cards are added, entry is automatically removed
 
 ### Delete Flow

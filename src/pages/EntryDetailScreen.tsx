@@ -69,6 +69,7 @@ const EntryDetailScreen: React.FC = () => {
 	const [log, setLog] = useState('Loading...');
 	const [errorMsg, setErrorMsg] = useState('');
 	const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+	const [isAddingAll, setIsAddingAll] = useState(false);
 
 	/**
 	 * Load entry and its cards from database
@@ -291,8 +292,103 @@ const EntryDetailScreen: React.FC = () => {
 	};
 
 	/**
-	 * Check if URL needs extraction
-	 */
+		* Add all pending cards to AnkiDroid
+		*/
+	const addAllCards = async () => {
+		// Get indices of pending cards
+		const pendingIndices = cards
+			.map((card, index) => ({ card, index }))
+			.filter(({ card }) => card.uiStatus === 'idle')
+			.map(({ index }) => index);
+		
+		if (pendingIndices.length === 0) return;
+		
+		setIsAddingAll(true);
+		
+		try {
+			// Check AnkiDroid availability once
+			const available = await AnkiDroid.isAvailable();
+			if (!available.value) throw new Error('AnkiDroid not available');
+			
+			const perm = await AnkiDroid.hasPermission();
+			if (!perm.value) {
+				const req = await AnkiDroid.requestPermission();
+				if (!req.value) throw new Error('Permission denied');
+			}
+			
+			// Add each pending card
+			let addedCount = 0;
+			for (const index of pendingIndices) {
+				const card = cards[index];
+				
+				// Update UI to show adding
+				setCards(prev => {
+					const updated = [...prev];
+					updated[index] = { ...updated[index], uiStatus: 'adding' };
+					return updated;
+				});
+				setLog(`Adding card ${addedCount + 1} of ${pendingIndices.length}...`);
+				
+				try {
+					const result = await AnkiDroid.addBasicCard({
+						deckName: entry?.deckName || 'MasterFlasher',
+						modelKey: 'com.snortstudios.masterflasher',
+						front: card.front,
+						back: card.back,
+						tags: card.tags || [],
+					});
+					
+					// Update database
+					await Inbox.updateCardStatus({
+						cardId: card.id,
+						status: 'added',
+						noteId: result.noteId
+					});
+					
+					// Update local state
+					setCards(prev => {
+						const updated = [...prev];
+						updated[index] = { ...updated[index], uiStatus: 'added', status: 'added' };
+						return updated;
+					});
+					addedCount++;
+				} catch (cardError) {
+					console.error(`Failed to add card ${index}:`, cardError);
+					setCards(prev => {
+						const updated = [...prev];
+						updated[index] = { ...updated[index], uiStatus: 'error' };
+						return updated;
+					});
+				}
+			}
+			
+			setLog(`Added ${addedCount} of ${pendingIndices.length} cards`);
+			
+			// Check if all cards are now added
+			const currentCards = cards.map((c, i) =>
+				pendingIndices.includes(i) && c.uiStatus !== 'error'
+					? { ...c, status: 'added' as const }
+					: c
+			);
+			const allAdded = currentCards.every(c => c.status === 'added');
+			
+			if (allAdded && entry) {
+				const autoRemoveResult = await Inbox.checkAutoRemove({ entryId: entry.id });
+				if (autoRemoveResult.removed) {
+					history.replace('/inbox');
+				}
+			}
+		} catch (e) {
+			console.error('Failed to add all cards:', e);
+			setLog('Failed to add cards: ' + (e instanceof Error ? e.message : String(e)));
+		} finally {
+			setIsAddingAll(false);
+		}
+	};
+
+	/**
+		* Check if URL needs extraction
+		*/
 	const needsExtraction = entry?.contentType === 'url' && !entry.extractedText;
 
 	return (
@@ -503,6 +599,24 @@ const EntryDetailScreen: React.FC = () => {
 										Deck: {entry.deckName}
 									</IonChip>
 								)}
+								<IonButton
+									expand="block"
+									onClick={addAllCards}
+									disabled={isAddingAll || cards.every(c => c.status === 'added')}
+									style={{ marginTop: 16 }}
+								>
+									{isAddingAll ? (
+										<>
+											<IonSpinner name="crescent" style={{ width: 20, height: 20, marginRight: 8 }} />
+											Adding...
+										</>
+									) : (
+										<>
+											<IonIcon slot="start" icon={addCircleOutline} />
+											Add All to Anki
+										</>
+									)}
+								</IonButton>
 							</IonCardContent>
 						</IonCard>
 
