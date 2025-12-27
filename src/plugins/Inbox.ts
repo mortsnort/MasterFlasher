@@ -2,13 +2,26 @@ import { registerPlugin } from '@capacitor/core';
 
 /**
  * Inbox entry representing shared content
+ *
+ * Content types:
+ * - text: Plain text shared from any app
+ * - url: A URL that can be extracted via WebClipper
+ * - pdf: A PDF file stored locally with Capacitor-compatible URL for pdf.js access
  */
 export interface InboxEntry {
 	id: string;
-	contentType: 'text' | 'url';
+	contentType: 'text' | 'url' | 'pdf';
+	/**
+	 * The content value:
+	 * - For text: the actual text content
+	 * - For url: the URL string
+	 * - For pdf: Capacitor-compatible file URL (capacitor://localhost/_capacitor_file_/path/to/file.pdf)
+	 */
 	content: string;
 	preview: string;
+	/** Title from WebClipper (URLs) or original filename (PDFs) */
 	title?: string;
+	/** Extracted text content (from WebClipper for URLs, pdf.js for PDFs) */
 	extractedText?: string;
 	deckName?: string;
 	isLocked: boolean;

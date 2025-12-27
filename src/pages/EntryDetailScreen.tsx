@@ -27,6 +27,7 @@ import {
 import {
 	linkOutline,
 	documentTextOutline,
+	documentOutline,
 	flashOutline,
 	addCircleOutline,
 	checkmarkCircle,
@@ -42,6 +43,7 @@ import AnkiDroid from '../plugins/AnkiDroid';
 import { generateFacts } from '../lib/gemini/generateFacts';
 import { generateFlashcards } from '../lib/gemini/generateFlashcards';
 import { hasValidConfig } from '../lib/settings/geminiConfig';
+import { extractPdfText } from '../lib/pdf/extractPdfText';
 
 type UIState =
 	| 'LOADING'
@@ -169,6 +171,48 @@ const EntryDetailScreen: React.FC = () => {
 		} catch (e) {
 			console.error('Extraction failed:', e);
 			setErrorMsg('Extraction failed or cancelled');
+			setState('ERROR');
+		}
+	};
+
+	/**
+	 * Handle PDF text extraction via pdf.js
+	 */
+	const handlePdfExtract = async () => {
+		if (!entry || entry.contentType !== 'pdf') return;
+
+		try {
+			setState('EXTRACTING');
+			setLog('Extracting text from PDF...');
+
+			// pdf.js loads the file directly via the Capacitor URL
+			const extractedText = await extractPdfText(entry.content);
+
+			// Check if any text was extracted
+			if (!extractedText || extractedText.length < 10) {
+				setErrorMsg(
+					'Very little text was extracted. This PDF may contain mostly images (scanned document). OCR is not currently supported.'
+				);
+				setState('ERROR');
+				return;
+			}
+
+			// Save to database
+			await Inbox.updateExtractedContent({
+				entryId: entry.id,
+				title: entry.title || 'PDF Document',
+				extractedText,
+			});
+
+			// Update local state
+			setEntry({ ...entry, extractedText });
+			setLog(`Extracted ${extractedText.length} characters from PDF`);
+			setState('READY');
+		} catch (e) {
+			console.error('PDF extraction failed:', e);
+			setErrorMsg(
+				'PDF extraction failed. The file may be password-protected or corrupted.'
+			);
 			setState('ERROR');
 		}
 	};
@@ -390,9 +434,49 @@ const EntryDetailScreen: React.FC = () => {
 	};
 
 	/**
-		* Check if URL needs extraction
-		*/
+	 * Check if URL needs extraction
+	 */
 	const needsExtraction = entry?.contentType === 'url' && !entry.extractedText;
+
+	/**
+	 * Check if PDF needs extraction
+	 */
+	const needsPdfExtraction = entry?.contentType === 'pdf' && !entry.extractedText;
+
+	/**
+	 * Check if content needs any extraction (URL or PDF)
+	 */
+	const needsAnyExtraction = needsExtraction || needsPdfExtraction;
+
+	/**
+	 * Get appropriate icon for content type
+	 */
+	const getContentIcon = () => {
+		if (!entry) return documentTextOutline;
+		switch (entry.contentType) {
+			case 'url':
+				return linkOutline;
+			case 'pdf':
+				return documentOutline;
+			default:
+				return documentTextOutline;
+		}
+	};
+
+	/**
+	 * Get appropriate title for content type
+	 */
+	const getContentTypeTitle = () => {
+		if (!entry) return 'Content';
+		switch (entry.contentType) {
+			case 'url':
+				return 'URL Content';
+			case 'pdf':
+				return 'PDF Content';
+			default:
+				return 'Text Content';
+		}
+	};
 
 	return (
 		<IonPage>
@@ -402,7 +486,12 @@ const EntryDetailScreen: React.FC = () => {
 						<IonBackButton defaultHref="/inbox" />
 					</IonButtons>
 					<IonTitle>
-						{entry?.title || (entry?.contentType === 'url' ? 'URL Entry' : 'Text Entry')}
+						{entry?.title ||
+							(entry?.contentType === 'url'
+								? 'URL Entry'
+								: entry?.contentType === 'pdf'
+									? 'PDF Entry'
+									: 'Text Entry')}
 					</IonTitle>
 					<IonButtons slot="end">
 						<IonButton
@@ -496,42 +585,57 @@ const EntryDetailScreen: React.FC = () => {
 						<IonCard>
 							<IonCardHeader>
 								<IonCardTitle>
-									<IonIcon 
-										icon={entry.contentType === 'url' ? linkOutline : documentTextOutline} 
-										style={{ marginRight: 8 }}
-									/>
-									{entry.contentType === 'url' ? 'URL Content' : 'Text Content'}
+									<IonIcon icon={getContentIcon()} style={{ marginRight: 8 }} />
+									{getContentTypeTitle()}
 								</IonCardTitle>
 							</IonCardHeader>
 							<IonCardContent>
+								{/* Show URL for url type */}
 								{entry.contentType === 'url' && (
 									<p style={{ wordBreak: 'break-all', color: 'var(--ion-color-primary)' }}>
 										{entry.content}
 									</p>
 								)}
+								{/* Show filename for PDF type */}
+								{entry.contentType === 'pdf' && entry.title && (
+									<p style={{ fontWeight: 500, marginBottom: 8 }}>
+										📄 {entry.title}
+									</p>
+								)}
+								{/* Show extracted text if available */}
 								{entry.extractedText ? (
-									<p style={{ 
-										maxHeight: 150, 
-										overflow: 'auto',
-										background: 'var(--ion-color-light)',
-										padding: 10,
-										borderRadius: 8
-									}}>
+									<p
+										style={{
+											maxHeight: 150,
+											overflow: 'auto',
+											background: 'var(--ion-color-light)',
+											padding: 10,
+											borderRadius: 8,
+										}}
+									>
 										{entry.extractedText.slice(0, 500)}
 										{entry.extractedText.length > 500 && '...'}
 									</p>
-								) : entry.contentType === 'text' && (
-									<p style={{ 
-										maxHeight: 150, 
-										overflow: 'auto',
-										background: 'var(--ion-color-light)',
-										padding: 10,
-										borderRadius: 8
-									}}>
+								) : entry.contentType === 'text' ? (
+									<p
+										style={{
+											maxHeight: 150,
+											overflow: 'auto',
+											background: 'var(--ion-color-light)',
+											padding: 10,
+											borderRadius: 8,
+										}}
+									>
 										{entry.content.slice(0, 500)}
 										{entry.content.length > 500 && '...'}
 									</p>
-								)}
+								) : entry.contentType === 'pdf' ? (
+									<IonText color="medium">
+										<p style={{ fontSize: '0.9em', fontStyle: 'italic' }}>
+											Text not yet extracted. Use the button below to extract text from this PDF.
+										</p>
+									</IonText>
+								) : null}
 							</IonCardContent>
 						</IonCard>
 
@@ -540,8 +644,27 @@ const EntryDetailScreen: React.FC = () => {
 							<IonCard>
 								<IonCardContent>
 									<IonButton expand="block" onClick={handleExtract}>
+										<IonIcon slot="start" icon={documentTextOutline} />
 										Extract Content from URL
 									</IonButton>
+								</IonCardContent>
+							</IonCard>
+						)}
+
+						{/* PDF Extraction Button */}
+						{needsPdfExtraction && (
+							<IonCard>
+								<IonCardContent>
+									<IonButton expand="block" onClick={handlePdfExtract}>
+										<IonIcon slot="start" icon={documentTextOutline} />
+										Extract Text from PDF
+									</IonButton>
+									<IonText color="medium">
+										<p style={{ fontSize: '0.85em', marginTop: 8 }}>
+											Extracts text content from the PDF. Note: Scanned/image PDFs may not extract
+											properly.
+										</p>
+									</IonText>
 								</IonCardContent>
 							</IonCard>
 						)}
@@ -565,19 +688,21 @@ const EntryDetailScreen: React.FC = () => {
 										/>
 									</IonItem>
 								</IonList>
-								<IonButton 
-									expand="block" 
+								<IonButton
+									expand="block"
 									onClick={handleGenerate}
-									disabled={needsExtraction}
+									disabled={needsAnyExtraction}
 									style={{ marginTop: 16 }}
 								>
 									<IonIcon slot="start" icon={flashOutline} />
 									Generate Cards
 								</IonButton>
-								{needsExtraction && (
+								{needsAnyExtraction && (
 									<IonText color="medium">
 										<p style={{ fontSize: '0.85em', marginTop: 8 }}>
-											Extract content from the URL first.
+											{needsExtraction
+												? 'Extract content from the URL first.'
+												: 'Extract text from the PDF first.'}
 										</p>
 									</IonText>
 								)}

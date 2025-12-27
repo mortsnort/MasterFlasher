@@ -28,6 +28,7 @@ import {
 	settingsOutline,
 	linkOutline,
 	documentTextOutline,
+	documentOutline,
 	trashOutline,
 	lockClosedOutline,
 	timeOutline,
@@ -179,7 +180,7 @@ const InboxScreen: React.FC = () => {
 						/>
 						<IonText color="medium">
 							<h2>Inbox Empty</h2>
-							<p>Share text or URLs from any app to create flashcards.</p>
+							<p>Share text, URLs, or PDFs from any app to create flashcards.</p>
 						</IonText>
 					</div>
 				)}
@@ -187,35 +188,55 @@ const InboxScreen: React.FC = () => {
 				{/* Entries List */}
 				{!loading && !error && entries.length > 0 && (
 					<IonList>
-						{entries.map(entry => (
+						{entries.map((entry) => (
 							<IonItemSliding key={entry.id}>
 								<IonItem button onClick={() => openEntry(entry)}>
 									<IonIcon
 										slot="start"
-										icon={entry.contentType === 'url' ? linkOutline : documentTextOutline}
-										color={entry.contentType === 'url' ? 'primary' : 'medium'}
+										icon={
+											entry.contentType === 'url'
+												? linkOutline
+												: entry.contentType === 'pdf'
+													? documentOutline
+													: documentTextOutline
+										}
+										color={
+											entry.contentType === 'url'
+												? 'primary'
+												: entry.contentType === 'pdf'
+													? 'tertiary'
+													: 'medium'
+										}
 									/>
 									<IonLabel>
-										<h2 style={{ 
-											display: 'flex', 
-											alignItems: 'center', 
-											gap: 8 
-										}}>
+										<h2
+											style={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: 8,
+											}}
+										>
 											{entry.title || entry.preview}
 											{entry.isLocked && (
-												<IonIcon 
-													icon={lockClosedOutline} 
-													color="success" 
+												<IonIcon
+													icon={lockClosedOutline}
+													color="success"
 													style={{ fontSize: 14 }}
 												/>
 											)}
 										</h2>
-										<p style={{ 
-											overflow: 'hidden', 
-											textOverflow: 'ellipsis', 
-											whiteSpace: 'nowrap' 
-										}}>
-											{entry.contentType === 'url' ? entry.content : entry.preview}
+										<p
+											style={{
+												overflow: 'hidden',
+												textOverflow: 'ellipsis',
+												whiteSpace: 'nowrap',
+											}}
+										>
+											{entry.contentType === 'url'
+												? entry.content
+												: entry.contentType === 'pdf'
+													? entry.title || 'PDF Document'
+													: entry.preview}
 										</p>
 										<p style={{ 
 											display: 'flex', 

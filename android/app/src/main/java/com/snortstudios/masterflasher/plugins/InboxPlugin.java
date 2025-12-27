@@ -15,6 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -112,6 +113,7 @@ public class InboxPlugin extends Plugin {
     
     /**
      * Delete an entry by ID (cascade deletes its cards)
+     * For PDF entries, also deletes the PDF file from app storage
      * Params: { id: string }
      */
     @PluginMethod
@@ -123,6 +125,12 @@ public class InboxPlugin extends Plugin {
         }
         
         try {
+            // Get entry first to check if it's a PDF that needs file cleanup
+            InboxEntry entry = getDao().getEntry(id);
+            if (entry != null && "pdf".equals(entry.contentType)) {
+                deletePdfFile(entry.content);
+            }
+            
             getDao().deleteEntry(id);
             call.resolve();
         } catch (Exception e) {
@@ -199,6 +207,7 @@ public class InboxPlugin extends Plugin {
     
     /**
      * Check if all cards for an entry have been added, and if so, auto-remove the entry
+     * For PDF entries, also deletes the PDF file from app storage
      * Params: { entryId: string }
      * Returns: { removed: boolean }
      */
@@ -218,6 +227,12 @@ public class InboxPlugin extends Plugin {
             
             // If there are cards and none are pending, remove the entry
             if (totalCards > 0 && pendingCards == 0) {
+                // Get entry first to check if it's a PDF that needs file cleanup
+                InboxEntry entry = getDao().getEntry(entryId);
+                if (entry != null && "pdf".equals(entry.contentType)) {
+                    deletePdfFile(entry.content);
+                }
+                
                 getDao().deleteEntry(entryId);
                 result.put("removed", true);
             } else {
@@ -406,5 +421,38 @@ public class InboxPlugin extends Plugin {
         }
         
         return card;
+    }
+    
+    /**
+     * Delete a PDF file from app storage given a Capacitor URL
+     *
+     * Capacitor URL format: capacitor://localhost/_capacitor_file_/data/.../.../pdfs/pdf_uuid.pdf
+     * We need to extract the file path and delete it.
+     *
+     * @param capacitorUrl The Capacitor-compatible file URL stored in entry.content
+     */
+    private void deletePdfFile(String capacitorUrl) {
+        if (capacitorUrl == null || capacitorUrl.isEmpty()) {
+            return;
+        }
+        
+        try {
+            // Extract file path from Capacitor URL
+            // Format: capacitor://localhost/_capacitor_file_<absolute_path>
+            String prefix = "capacitor://localhost/_capacitor_file_";
+            if (capacitorUrl.startsWith(prefix)) {
+                String filePath = capacitorUrl.substring(prefix.length());
+                File pdfFile = new File(filePath);
+                if (pdfFile.exists()) {
+                    boolean deleted = pdfFile.delete();
+                    if (!deleted) {
+                        android.util.Log.w("InboxPlugin", "Failed to delete PDF file: " + filePath);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Log but don't fail - file cleanup is best effort
+            android.util.Log.e("InboxPlugin", "Error deleting PDF file: " + e.getMessage(), e);
+        }
     }
 }

@@ -8,9 +8,10 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 ## Features
 
-- **Silent Share**: Share text or URLs from any app — content is saved to inbox without opening the app
+- **Silent Share**: Share text, URLs, or PDFs from any app — content is saved to inbox without opening the app
 - **Inbox-based workflow**: Process multiple items at your own pace
 - **Web clipper**: Extract clean article text from URLs using Readability
+- **PDF extraction**: Extract text from PDF files using pdf.js
 - **Gemini-powered**: Automatic fact extraction and flashcard generation
 - **Deck customization**: Set custom deck name per entry
 - **Manual review**: Review and add cards one by one
@@ -19,10 +20,10 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 ## How It Works
 
-1. **Share**: Share text or a URL to MasterFlasher from any Android app.
+1. **Share**: Share text, a URL, or a PDF to MasterFlasher from any Android app.
 2. **Silent Save**: Content is saved to your inbox with a toast confirmation — no UI opens.
 3. **Open App**: Launch MasterFlasher to see your inbox of saved items.
-4. **Process**: Tap an entry, extract content (for URLs), set deck name, generate cards.
+4. **Process**: Tap an entry, extract content (for URLs/PDFs), set deck name, generate cards.
 5. **Review & Add**: Review each card and add the ones you want to AnkiDroid.
 6. **Auto-remove**: Once all cards are added, the entry is automatically removed.
 
@@ -75,15 +76,16 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 ## Usage
 
-1. **Share content**: Share text or a URL to MasterFlasher from any Android app.
+1. **Share content**: Share text, a URL, or a PDF to MasterFlasher from any Android app.
 2. **Content saved**: You'll see a toast "Saved to inbox" — the app doesn't open.
 3. **Open MasterFlasher**: Launch the app to see your inbox of saved items.
 4. **Tap an entry**: Opens the detail screen for that content.
 5. **For URLs**: Tap "Extract Content from URL" to fetch the article text.
-6. **Set deck name**: Choose a custom deck name (default: "MasterFlasher").
-7. **Generate cards**: Tap "Generate Cards" to create flashcards using Gemini.
-8. **Review & add**: Tap "Add" on each card you want to keep.
-9. **Auto-cleanup**: Once all cards are added, the entry is removed from inbox.
+6. **For PDFs**: Tap "Extract Text from PDF" to extract the document text.
+7. **Set deck name**: Choose a custom deck name (default: "MasterFlasher").
+8. **Generate cards**: Tap "Generate Cards" to create flashcards using Gemini.
+9. **Review & add**: Tap "Add" on each card you want to keep.
+10. **Auto-cleanup**: Once all cards are added, the entry is removed from inbox.
 
 ### Managing Entries
 
