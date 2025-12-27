@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo.png" width="250" alt="MasterFlasher logo">
+  <img src="./src/assets/master_flasher_logo512.png" width="250" alt="MasterFlasher logo">
 </p>
 
 <h1 align="center">MasterFlasher</h1>
