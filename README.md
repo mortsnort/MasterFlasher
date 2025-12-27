@@ -4,30 +4,37 @@
 
 <h1 align="center">MasterFlasher</h1>
 
-MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid flashcards using Gemini. Share an article, get atomic facts, review the cards, and add the ones you want.
+MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid flashcards using Gemini. Share content from any app, it's saved silently to your inbox, then process items at your own pace.
 
 ## Features
 
-- Android share target for text and URLs
-- Readability-based web clipper for clean article extraction
-- Gemini-powered fact extraction and card generation
-- Manual review before adding cards
-- Direct AnkiDroid API integration (deck + model creation, note insertion)
+- **Silent Share**: Share text or URLs from any app — content is saved to inbox without opening the app
+- **Inbox-based workflow**: Process multiple items at your own pace
+- **Web clipper**: Extract clean article text from URLs using Readability
+- **Gemini-powered**: Automatic fact extraction and flashcard generation
+- **Deck customization**: Set custom deck name per entry
+- **Manual review**: Review and add cards one by one
+- **Auto-cleanup**: Entries are removed automatically when all cards are added
+- **Direct AnkiDroid integration**: Deck + model creation, note insertion
 
 ## How It Works
 
-1. Share text or a URL to MasterFlasher from any Android app.
-2. URLs open a WebView reader; text is used directly.
-3. Gemini extracts atomic facts, then generates basic front/back cards.
-4. You review the cards and add selected ones to AnkiDroid.
+1. **Share**: Share text or a URL to MasterFlasher from any Android app.
+2. **Silent Save**: Content is saved to your inbox with a toast confirmation — no UI opens.
+3. **Open App**: Launch MasterFlasher to see your inbox of saved items.
+4. **Process**: Tap an entry, extract content (for URLs), set deck name, generate cards.
+5. **Review & Add**: Review each card and add the ones you want to AnkiDroid.
+6. **Auto-remove**: Once all cards are added, the entry is automatically removed.
 
 ## Project Structure
 
-- `src/pages/ImportScreen.tsx` - Main flow UI (share, extract, generate, review, add)
+- `src/pages/InboxScreen.tsx` - Main inbox screen showing saved entries
+- `src/pages/EntryDetailScreen.tsx` - Card generation and review for a single entry
+- `src/pages/SettingsScreen.tsx` - API key and settings configuration
+- `src/plugins/Inbox.ts` - Inbox database plugin interface
 - `src/lib/gemini/` - Gemini prompts and response parsing
-- `src/lib/share/` - Share intent parsing
-- `src/plugins/` - Capacitor plugin interfaces
-- `android/` - Native Android app + Capacitor plugins
+- `android/app/src/main/java/com/snortstudios/masterflasher/db/` - Room database entities and DAO
+- `android/app/src/main/java/com/snortstudios/masterflasher/plugins/` - Native Capacitor plugins
 
 ## Requirements
 
@@ -68,16 +75,29 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 ## Usage
 
-1. Share text or a URL to MasterFlasher from any Android app.
-2. If it is a URL, tap "Open & Extract".
-3. Review the generated cards and tap "Add" on the ones you want.
+1. **Share content**: Share text or a URL to MasterFlasher from any Android app.
+2. **Content saved**: You'll see a toast "Saved to inbox" — the app doesn't open.
+3. **Open MasterFlasher**: Launch the app to see your inbox of saved items.
+4. **Tap an entry**: Opens the detail screen for that content.
+5. **For URLs**: Tap "Extract Content from URL" to fetch the article text.
+6. **Set deck name**: Choose a custom deck name (default: "MasterFlasher").
+7. **Generate cards**: Tap "Generate Cards" to create flashcards using Gemini.
+8. **Review & add**: Tap "Add" on each card you want to keep.
+9. **Auto-cleanup**: Once all cards are added, the entry is removed from inbox.
+
+### Managing Entries
+
+- **Pull to refresh**: Pull down on the inbox to reload entries
+- **Delete entries**: Swipe left on an entry and tap the trash icon
+- **Locked entries**: Entries with generated cards show a lock icon and "Cards Ready" badge
 
 ## Configuration Notes
 
-- Deck name is hard-coded as `MasterFlasher`.
+- Default deck name is `MasterFlasher` (customizable per entry).
 - Model key used for cards is `com.snortstudios.masterflasher`.
 - Gemini output is expected to be strict JSON; failures will surface in the UI log.
 - Default Gemini model is `gemini-2.5-flash-lite` when not specified.
+- Generated cards and entries are stored in a local SQLite database.
 
 ## API Key Configuration
 
