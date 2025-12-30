@@ -205,20 +205,17 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 	 * Stop listening for speech
 	 */
 	const stopListening = useCallback(async (): Promise<void> => {
-		// Always update UI state first
+		// Always update UI state first - this ensures button works immediately
 		setIsListening(false);
 		
+		// Try to stop the recognizer - don't check isListening() first as it may
+		// behave differently on different devices/emulators
 		try {
-			// Check if actually listening before calling stop
-			const { listening } = await SpeechRecognition.isListening();
-			
-			if (listening) {
-				await SpeechRecognition.stop();
-			}
-		} catch (e) {
-			// Log error with proper serialization
-			const errorMessage = e instanceof Error ? e.message : JSON.stringify(e);
-			console.error('Failed to stop speech recognition:', errorMessage);
+			await SpeechRecognition.stop();
+		} catch {
+			// Ignore errors - recognizer may have already stopped automatically
+			// This is expected behavior when recognition ends due to silence timeout
+			console.log('Speech recognition stop() completed (may have already stopped)');
 		}
 		
 		// Always clean up listeners regardless of stop result
