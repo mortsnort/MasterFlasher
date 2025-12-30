@@ -17,6 +17,7 @@ import {
 	IonItem,
 	IonLabel,
 	IonInput,
+	IonTextarea,
 	IonIcon,
 	IonText,
 	IonProgressBar,
@@ -35,6 +36,9 @@ import {
 	keyOutline,
 	settingsOutline,
 	trashOutline,
+	createOutline,
+	closeOutline,
+	saveOutline,
 } from 'ionicons/icons';
 import Inbox from '../plugins/Inbox';
 import type { InboxEntry, GeneratedCard } from '../plugins/Inbox';
@@ -72,6 +76,17 @@ const EntryDetailScreen: React.FC = () => {
 	const [errorMsg, setErrorMsg] = useState('');
 	const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 	const [isAddingAll, setIsAddingAll] = useState(false);
+	
+	// Card editing state
+	const [editingCardIndex, setEditingCardIndex] = useState<number | null>(null);
+	const [editedFront, setEditedFront] = useState('');
+	const [editedBack, setEditedBack] = useState('');
+	const [isSavingCard, setIsSavingCard] = useState(false);
+	
+	// Deck name editing state (for review phase)
+	const [isEditingDeckName, setIsEditingDeckName] = useState(false);
+	const [editedDeckName, setEditedDeckName] = useState('');
+	const [isSavingDeckName, setIsSavingDeckName] = useState(false);
 
 	/**
 	 * Load entry and its cards from database
@@ -455,6 +470,125 @@ const EntryDetailScreen: React.FC = () => {
 		}
 	};
 
+	// ==================== Card Editing Functions ====================
+
+	/**
+	 * Start editing a card
+	 */
+	const startEditCard = (index: number) => {
+		const card = cards[index];
+		setEditingCardIndex(index);
+		setEditedFront(card.front);
+		setEditedBack(card.back);
+	};
+
+	/**
+	 * Save card edits to database
+	 */
+	const saveCardEdit = async () => {
+		if (editingCardIndex === null) return;
+		
+		const card = cards[editingCardIndex];
+		const trimmedFront = editedFront.trim();
+		const trimmedBack = editedBack.trim();
+		
+		// Validate content is not empty
+		if (!trimmedFront || !trimmedBack) {
+			setLog('Card front and back cannot be empty');
+			return;
+		}
+		
+		setIsSavingCard(true);
+		
+		try {
+			await Inbox.updateCardContent({
+				cardId: card.id,
+				front: trimmedFront,
+				back: trimmedBack
+			});
+			
+			// Update local state
+			const updated = [...cards];
+			updated[editingCardIndex] = {
+				...updated[editingCardIndex],
+				front: trimmedFront,
+				back: trimmedBack
+			};
+			setCards(updated);
+			setLog('Card updated successfully');
+			
+			// Exit edit mode
+			setEditingCardIndex(null);
+			setEditedFront('');
+			setEditedBack('');
+		} catch (e) {
+			console.error('Failed to save card:', e);
+			setLog('Failed to save card changes');
+		} finally {
+			setIsSavingCard(false);
+		}
+	};
+
+	/**
+	 * Cancel card edit without saving
+	 */
+	const cancelCardEdit = () => {
+		setEditingCardIndex(null);
+		setEditedFront('');
+		setEditedBack('');
+	};
+
+	// ==================== Deck Name Editing Functions ====================
+
+	/**
+	 * Start editing deck name in review phase
+	 */
+	const startEditDeckName = () => {
+		setIsEditingDeckName(true);
+		setEditedDeckName(entry?.deckName || 'MasterFlasher');
+	};
+
+	/**
+	 * Save deck name changes to database
+	 */
+	const saveDeckNameEdit = async () => {
+		if (!entry) return;
+		
+		const trimmedName = editedDeckName.trim() || 'MasterFlasher';
+		
+		setIsSavingDeckName(true);
+		
+		try {
+			await Inbox.updateDeckName({
+				entryId: entry.id,
+				deckName: trimmedName
+			});
+			
+			// Update local state
+			setEntry({ ...entry, deckName: trimmedName });
+			setLog('Deck name updated');
+			
+			// Exit edit mode
+			setIsEditingDeckName(false);
+			setEditedDeckName('');
+		} catch (e) {
+			console.error('Failed to save deck name:', e);
+			setLog('Failed to save deck name');
+		} finally {
+			setIsSavingDeckName(false);
+		}
+	};
+
+	/**
+	 * Cancel deck name edit without saving
+	 */
+	const cancelDeckNameEdit = () => {
+		setIsEditingDeckName(false);
+		setEditedDeckName('');
+	};
+
+	// ==================== Helper Functions ====================
+
 	/**
 	 * Check if URL needs extraction
 	 */
@@ -744,15 +878,64 @@ const EntryDetailScreen: React.FC = () => {
 								<p>
 									{cards.filter(c => c.status === 'added').length} / {cards.length} cards added
 								</p>
-								{entry?.deckName && (
-									<IonChip color="primary">
-										Deck: {entry.deckName}
-									</IonChip>
-								)}
+								
+								{/* Editable Deck Name */}
+								<div style={{ marginTop: 12, marginBottom: 12 }}>
+									{isEditingDeckName ? (
+										<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+											<IonInput
+												value={editedDeckName}
+												onIonInput={(e) => setEditedDeckName(e.detail.value ?? '')}
+												placeholder="Deck name"
+												style={{
+													flex: 1,
+													border: '1px solid var(--ion-color-medium)',
+													borderRadius: 8,
+													padding: '0 8px'
+												}}
+											/>
+											<IonButton
+												size="small"
+												color="success"
+												onClick={saveDeckNameEdit}
+												disabled={isSavingDeckName}
+											>
+												{isSavingDeckName ? (
+													<IonSpinner name="crescent" style={{ width: 16, height: 16 }} />
+												) : (
+													<IonIcon icon={saveOutline} />
+												)}
+											</IonButton>
+											<IonButton
+												size="small"
+												color="medium"
+												fill="outline"
+												onClick={cancelDeckNameEdit}
+												disabled={isSavingDeckName}
+											>
+												<IonIcon icon={closeOutline} />
+											</IonButton>
+										</div>
+									) : (
+										<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+											<IonChip color="primary">
+												Deck: {entry?.deckName || 'MasterFlasher'}
+											</IonChip>
+											<IonButton
+												size="small"
+												fill="clear"
+												onClick={startEditDeckName}
+											>
+												<IonIcon icon={createOutline} />
+											</IonButton>
+										</div>
+									)}
+								</div>
+
 								<IonButton
 									expand="block"
 									onClick={addAllCards}
-									disabled={isAddingAll || cards.every(c => c.status === 'added')}
+									disabled={isAddingAll || cards.every(c => c.status === 'added') || editingCardIndex !== null}
 									style={{ marginTop: 16 }}
 								>
 									{isAddingAll ? (
@@ -770,43 +953,136 @@ const EntryDetailScreen: React.FC = () => {
 							</IonCardContent>
 						</IonCard>
 
-						<IonList>
-							{cards.map((card, i) => (
-								<IonItem key={card.id}>
-									<IonLabel className="ion-text-wrap">
-										<h2>Q: {card.front}</h2>
-										<p>A: {card.back}</p>
+						{/* Card List */}
+						{cards.map((card, i) => (
+							<IonCard key={card.id} style={{ marginBottom: 12 }}>
+								{editingCardIndex === i ? (
+									/* Edit Mode */
+									<IonCardContent>
+										<IonText color="primary">
+											<h3 style={{ marginTop: 0, marginBottom: 8 }}>Editing Card {i + 1}</h3>
+										</IonText>
+										
+										<IonLabel position="stacked" style={{ marginBottom: 4 }}>Question</IonLabel>
+										<IonTextarea
+											value={editedFront}
+											onIonInput={(e) => setEditedFront(e.detail.value ?? '')}
+											placeholder="Enter the question..."
+											autoGrow
+											rows={2}
+											style={{
+												border: '1px solid var(--ion-color-medium)',
+												borderRadius: 8,
+												padding: 8,
+												marginBottom: 12,
+												'--background': 'var(--ion-color-light)'
+											}}
+										/>
+										
+										<IonLabel position="stacked" style={{ marginBottom: 4 }}>Answer</IonLabel>
+										<IonTextarea
+											value={editedBack}
+											onIonInput={(e) => setEditedBack(e.detail.value ?? '')}
+											placeholder="Enter the answer..."
+											autoGrow
+											rows={2}
+											style={{
+												border: '1px solid var(--ion-color-medium)',
+												borderRadius: 8,
+												padding: 8,
+												marginBottom: 12,
+												'--background': 'var(--ion-color-light)'
+											}}
+										/>
+										
 										{card.tags && card.tags.length > 0 && (
-											<div style={{ marginTop: 4 }}>
+											<div style={{ marginBottom: 12 }}>
 												{card.tags.map(t => <IonChip key={t} style={{ fontSize: 10 }}>{t}</IonChip>)}
 											</div>
 										)}
-									</IonLabel>
-									<IonButton
-										slot="end"
-										fill={card.uiStatus === 'added' ? 'clear' : 'solid'}
-										color={
-											card.uiStatus === 'error' ? 'danger' : 
-											card.uiStatus === 'added' ? 'success' : 
-											'primary'
-										}
-										disabled={card.uiStatus === 'adding' || card.uiStatus === 'added'}
-										onClick={() => addSingleCard(i)}
-									>
-										{card.uiStatus === 'adding' && <IonSpinner name="crescent" style={{ width: 20, height: 20 }} />}
-										{card.uiStatus === 'added' && <IonIcon icon={checkmarkCircle} />}
-										{card.uiStatus === 'error' && <IonIcon icon={alertCircle} />}
-										{card.uiStatus === 'idle' && <IonIcon icon={addCircleOutline} />}
-										<span style={{ marginLeft: 4 }}>
-											{card.uiStatus === 'adding' ? '' : 
-											 card.uiStatus === 'added' ? 'Added' : 
-											 card.uiStatus === 'error' ? 'Retry' : 
-											 'Add'}
-										</span>
-									</IonButton>
-								</IonItem>
-							))}
-						</IonList>
+										
+										<div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+											<IonButton
+												fill="outline"
+												color="medium"
+												onClick={cancelCardEdit}
+												disabled={isSavingCard}
+											>
+												<IonIcon slot="start" icon={closeOutline} />
+												Cancel
+											</IonButton>
+											<IonButton
+												color="success"
+												onClick={saveCardEdit}
+												disabled={isSavingCard}
+											>
+												{isSavingCard ? (
+													<IonSpinner name="crescent" style={{ width: 20, height: 20 }} />
+												) : (
+													<>
+														<IonIcon slot="start" icon={saveOutline} />
+														Save
+													</>
+												)}
+											</IonButton>
+										</div>
+									</IonCardContent>
+								) : (
+									/* View Mode */
+									<IonCardContent>
+										<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+											<div style={{ flex: 1 }}>
+												<h3 style={{ margin: '0 0 4px 0', fontWeight: 600 }}>Q: {card.front}</h3>
+												<p style={{ margin: '0 0 8px 0', color: 'var(--ion-color-medium)' }}>A: {card.back}</p>
+												{card.tags && card.tags.length > 0 && (
+													<div>
+														{card.tags.map(t => <IonChip key={t} style={{ fontSize: 10 }}>{t}</IonChip>)}
+													</div>
+												)}
+											</div>
+											
+											<div style={{ display: 'flex', gap: 4, marginLeft: 8, flexShrink: 0 }}>
+												{/* Edit Button - only for pending cards */}
+												{card.uiStatus !== 'added' && card.uiStatus !== 'adding' && (
+													<IonButton
+														size="small"
+														fill="clear"
+														onClick={() => startEditCard(i)}
+														disabled={editingCardIndex !== null || isAddingAll}
+													>
+														<IonIcon icon={createOutline} />
+													</IonButton>
+												)}
+												
+												{/* Add/Status Button */}
+												<IonButton
+													size="small"
+													fill={card.uiStatus === 'added' ? 'clear' : 'solid'}
+													color={
+														card.uiStatus === 'error' ? 'danger' :
+														card.uiStatus === 'added' ? 'success' :
+														'primary'
+													}
+													disabled={card.uiStatus === 'adding' || card.uiStatus === 'added' || editingCardIndex !== null || isAddingAll}
+													onClick={() => addSingleCard(i)}
+												>
+													{card.uiStatus === 'adding' && <IonSpinner name="crescent" style={{ width: 18, height: 18 }} />}
+													{card.uiStatus === 'added' && <IonIcon icon={checkmarkCircle} />}
+													{card.uiStatus === 'error' && <IonIcon icon={alertCircle} />}
+													{card.uiStatus === 'idle' && <IonIcon icon={addCircleOutline} />}
+													<span style={{ marginLeft: 4 }}>
+														{card.uiStatus === 'adding' ? '' :
+														 card.uiStatus === 'added' ? 'Added' :
+														 card.uiStatus === 'error' ? 'Retry' :
+														 'Add'}
+													</span>
+												</IonButton>
+											</div>
+										</div>
+									</IonCardContent>
+								)}
+							</IonCard>
+						))}
 					</div>
 				)}
 			</IonContent>

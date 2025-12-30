@@ -206,6 +206,38 @@ public class InboxPlugin extends Plugin {
     }
     
     /**
+     * Update a card's content (front/back text)
+     * Params: { cardId: string, front: string, back: string }
+     */
+    @PluginMethod
+    public void updateCardContent(PluginCall call) {
+        String cardId = call.getString("cardId");
+        String front = call.getString("front");
+        String back = call.getString("back");
+        
+        if (cardId == null || front == null || back == null) {
+            call.reject("Missing required parameters: cardId, front, and back");
+            return;
+        }
+        
+        try {
+            GeneratedCard card = getDao().getCard(cardId);
+            if (card == null) {
+                call.reject("Card not found: " + cardId);
+                return;
+            }
+            
+            card.front = front;
+            card.back = back;
+            
+            getDao().updateCard(card);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to update card content: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
      * Check if all cards for an entry have been added, and if so, auto-remove the entry
      * For PDF entries, also deletes the PDF file from app storage
      * Params: { entryId: string }

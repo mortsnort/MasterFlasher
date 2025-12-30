@@ -76,6 +76,11 @@ export interface InboxPlugin {
 	updateCardStatus(options: { cardId: string; status: string; noteId?: number }): Promise<void>;
 
 	/**
+	 * Update a card's content (front/back text)
+	 */
+	updateCardContent(options: { cardId: string; front: string; back: string }): Promise<void>;
+
+	/**
 	 * Check if all cards for an entry have been added, and if so, auto-remove the entry
 	 */
 	checkAutoRemove(options: { entryId: string }): Promise<{ removed: boolean }>;
