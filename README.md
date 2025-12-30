@@ -9,6 +9,7 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 ## Features
 
 - **Silent Share**: Share text, URLs, or PDFs from any app — content is saved to inbox without opening the app
+- **Voice Input**: Speak text directly into the app using the microphone button
 - **Inbox-based workflow**: Process multiple items at your own pace
 - **Web clipper**: Extract clean article text from URLs using Readability
 - **PDF extraction**: Extract text from PDF files using pdf.js
@@ -20,8 +21,8 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 ## How It Works
 
-1. **Share**: Share text, a URL, or a PDF to MasterFlasher from any Android app.
-2. **Silent Save**: Content is saved to your inbox with a toast confirmation — no UI opens.
+1. **Share or Speak**: Share text, a URL, or a PDF to MasterFlasher from any Android app, or tap the microphone button to speak.
+2. **Silent Save**: Content is saved to your inbox with a toast confirmation — no UI opens (for shares).
 3. **Open App**: Launch MasterFlasher to see your inbox of saved items.
 4. **Process**: Tap an entry, extract content (for URLs/PDFs), set deck name, generate cards.
 5. **Review & Add**: Review each card and add the ones you want to AnkiDroid.
@@ -29,10 +30,12 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 ## Project Structure
 
-- `src/pages/InboxScreen.tsx` - Main inbox screen showing saved entries
+- `src/pages/InboxScreen.tsx` - Main inbox screen showing saved entries with voice input FAB
 - `src/pages/EntryDetailScreen.tsx` - Card generation and review for a single entry
 - `src/pages/SettingsScreen.tsx` - API key and settings configuration
 - `src/plugins/Inbox.ts` - Inbox database plugin interface
+- `src/plugins/SpeechRecognition.ts` - Speech recognition plugin wrapper
+- `src/hooks/useSpeechRecognition.ts` - Custom hook for speech recognition
 - `src/lib/gemini/` - Gemini prompts and response parsing
 - `android/app/src/main/java/com/snortstudios/masterflasher/db/` - Room database entities and DAO
 - `android/app/src/main/java/com/snortstudios/masterflasher/plugins/` - Native Capacitor plugins
@@ -92,6 +95,14 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 - **Pull to refresh**: Pull down on the inbox to reload entries
 - **Delete entries**: Swipe left on an entry and tap the trash icon
 - **Locked entries**: Entries with generated cards show a lock icon and "Cards Ready" badge
+
+### Voice Input
+
+- **Add via speech**: Tap the microphone button (🎤) in the bottom-right corner
+- **Grant permission**: Allow microphone access when prompted (first use only)
+- **Speak clearly**: The app transcribes your speech in real-time
+- **Edit before saving**: Review and edit the transcribed text if needed
+- **Save to inbox**: Tap "Save to Inbox" to add the entry
 
 ## Configuration Notes
 

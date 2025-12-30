@@ -20,7 +20,12 @@ import {
 	IonItemOption,
 	IonChip,
 	IonSpinner,
+	IonFab,
+	IonFabButton,
+	IonModal,
+	IonTextarea,
 	useIonViewWillEnter,
+	useIonToast,
 } from '@ionic/react';
 import type { RefresherEventDetail } from '@ionic/react';
 import { App } from '@capacitor/app';
@@ -32,9 +37,14 @@ import {
 	trashOutline,
 	lockClosedOutline,
 	timeOutline,
+	micOutline,
+	stopOutline,
+	closeOutline,
+	checkmarkOutline,
 } from 'ionicons/icons';
 import Inbox from '../plugins/Inbox';
 import type { InboxEntry } from '../plugins/Inbox';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 /**
  * Format timestamp to relative time string
@@ -60,11 +70,41 @@ function formatRelativeTime(timestamp: number): string {
 	return 'Just now';
 }
 
+/**
+ * Generate a UUID v4
+ */
+function generateUUID(): string {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		const r = Math.random() * 16 | 0;
+		const v = c === 'x' ? r : (r & 0x3 | 0x8);
+		return v.toString(16);
+	});
+}
+
 const InboxScreen: React.FC = () => {
 	const history = useHistory();
 	const [entries, setEntries] = useState<InboxEntry[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	
+	// Speech recognition state
+	const [showSpeechModal, setShowSpeechModal] = useState(false);
+	const [editableTranscript, setEditableTranscript] = useState('');
+	const [isSaving, setIsSaving] = useState(false);
+	
+	const {
+		isAvailable,
+		isListening,
+		transcript,
+		error: speechError,
+		permissionStatus,
+		isInitializing,
+		startListening,
+		stopListening,
+		reset: resetSpeech,
+	} = useSpeechRecognition();
+	
+	const [presentToast] = useIonToast();
 
 	/**
 	 * Load all inbox entries from the database
@@ -101,6 +141,13 @@ const InboxScreen: React.FC = () => {
 			listener.then(handle => handle.remove());
 		};
 	}, [loadEntries]);
+	
+	// Update editable transcript when speech recognition updates
+	useEffect(() => {
+		if (transcript) {
+			setEditableTranscript(transcript);
+		}
+	}, [transcript]);
 
 	/**
 	 * Handle pull-to-refresh
@@ -135,6 +182,120 @@ const InboxScreen: React.FC = () => {
 	 */
 	const navigateToSettings = () => {
 		history.push('/settings');
+	};
+	
+	/**
+	 * Handle FAB click - open speech modal and start listening
+	 */
+	const handleSpeechFabClick = async () => {
+		if (!isAvailable) {
+			presentToast({
+				message: 'Speech recognition is not available on this device',
+				duration: 3000,
+				color: 'warning',
+			});
+			return;
+		}
+		
+		if (permissionStatus === 'denied') {
+			presentToast({
+				message: 'Microphone permission was denied. Please enable it in settings.',
+				duration: 3000,
+				color: 'warning',
+			});
+			return;
+		}
+		
+		// Reset state and open modal
+		resetSpeech();
+		setEditableTranscript('');
+		setShowSpeechModal(true);
+		
+		// Start listening after a short delay to let the modal open
+		setTimeout(() => {
+			startListening();
+		}, 300);
+	};
+	
+	/**
+	 * Handle stop listening
+	 */
+	const handleStopListening = async () => {
+		await stopListening();
+	};
+	
+	/**
+	 * Handle modal dismiss
+	 */
+	const handleDismissModal = async () => {
+		if (isListening) {
+			await stopListening();
+		}
+		resetSpeech();
+		setEditableTranscript('');
+		setShowSpeechModal(false);
+	};
+	
+	/**
+	 * Handle save transcript to inbox
+	 */
+	const handleSaveTranscript = async () => {
+		const textToSave = editableTranscript.trim();
+		
+		if (!textToSave) {
+			presentToast({
+				message: 'Please speak or enter some text to save',
+				duration: 2000,
+				color: 'warning',
+			});
+			return;
+		}
+		
+		setIsSaving(true);
+		
+		try {
+			// Create new inbox entry
+			const newEntry: InboxEntry = {
+				id: generateUUID(),
+				contentType: 'text',
+				content: textToSave,
+				preview: textToSave.length > 100 ? textToSave.substring(0, 100) + '...' : textToSave,
+				isLocked: false,
+				createdAt: Date.now(),
+			};
+			
+			await Inbox.saveEntry({ entry: newEntry });
+			
+			// Refresh entries
+			await loadEntries();
+			
+			// Close modal
+			handleDismissModal();
+			
+			presentToast({
+				message: 'Saved to inbox',
+				duration: 2000,
+				color: 'success',
+			});
+		} catch (e) {
+			console.error('Failed to save entry:', e);
+			presentToast({
+				message: 'Failed to save entry',
+				duration: 2000,
+				color: 'danger',
+			});
+		} finally {
+			setIsSaving(false);
+		}
+	};
+	
+	/**
+	 * Handle retry speech recognition
+	 */
+	const handleRetryListening = async () => {
+		resetSpeech();
+		setEditableTranscript('');
+		await startListening();
 	};
 
 	return (
@@ -180,7 +341,7 @@ const InboxScreen: React.FC = () => {
 						/>
 						<IonText color="medium">
 							<h2>Inbox Empty</h2>
-							<p>Share text, URLs, or PDFs from any app to create flashcards.</p>
+							<p>Share text, URLs, or PDFs from any app, or tap the microphone to speak.</p>
 						</IonText>
 					</div>
 				)}
@@ -267,6 +428,159 @@ const InboxScreen: React.FC = () => {
 						))}
 					</IonList>
 				)}
+				
+				{/* Speech Recognition FAB */}
+				{!isInitializing && isAvailable && (
+					<IonFab vertical="bottom" horizontal="end" slot="fixed">
+						<IonFabButton onClick={handleSpeechFabClick} color="primary">
+							<IonIcon icon={micOutline} />
+						</IonFabButton>
+					</IonFab>
+				)}
+				
+				{/* Speech Recognition Modal */}
+				<IonModal 
+					isOpen={showSpeechModal} 
+					onDidDismiss={handleDismissModal}
+					initialBreakpoint={0.5}
+					breakpoints={[0, 0.5, 0.75]}
+				>
+					<IonHeader>
+						<IonToolbar>
+							<IonTitle>Voice Input</IonTitle>
+							<IonButtons slot="end">
+								<IonButton onClick={handleDismissModal}>
+									<IonIcon slot="icon-only" icon={closeOutline} />
+								</IonButton>
+							</IonButtons>
+						</IonToolbar>
+					</IonHeader>
+					<IonContent className="ion-padding">
+						{/* Listening State */}
+						{isListening && (
+							<div style={{ textAlign: 'center', marginBottom: 20 }}>
+								<div 
+									style={{
+										width: 80,
+										height: 80,
+										borderRadius: '50%',
+										backgroundColor: 'var(--ion-color-primary)',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										margin: '0 auto 16px',
+										animation: 'pulse 1.5s infinite',
+									}}
+								>
+									<IonIcon 
+										icon={micOutline} 
+										style={{ fontSize: 40, color: 'white' }} 
+									/>
+								</div>
+								<IonText color="primary">
+									<h3 style={{ margin: 0 }}>Listening...</h3>
+								</IonText>
+								<IonText color="medium">
+									<p style={{ margin: '8px 0 0' }}>Speak now</p>
+								</IonText>
+								<IonButton 
+									fill="outline" 
+									color="danger" 
+									onClick={handleStopListening}
+									style={{ marginTop: 16 }}
+								>
+									<IonIcon slot="start" icon={stopOutline} />
+									Stop
+								</IonButton>
+							</div>
+						)}
+						
+						{/* Error State */}
+						{speechError && !isListening && (
+							<div style={{ textAlign: 'center', marginBottom: 20 }}>
+								<IonText color="danger">
+									<p>{speechError}</p>
+								</IonText>
+								<IonButton onClick={handleRetryListening}>
+									<IonIcon slot="start" icon={micOutline} />
+									Try Again
+								</IonButton>
+							</div>
+						)}
+						
+						{/* Transcript Display/Edit */}
+						{!isListening && !speechError && (
+							<>
+								<IonText color="medium">
+									<p style={{ marginBottom: 8 }}>
+										{editableTranscript ? 'Edit your text:' : 'Tap the microphone to speak, or type below:'}
+									</p>
+								</IonText>
+								<IonTextarea
+									placeholder="Your spoken text will appear here..."
+									value={editableTranscript}
+									onIonInput={(e) => setEditableTranscript(e.detail.value || '')}
+									rows={4}
+									autoGrow
+									style={{
+										'--background': 'var(--ion-color-light)',
+										'--padding-start': '12px',
+										'--padding-end': '12px',
+										'--padding-top': '12px',
+										'--padding-bottom': '12px',
+										borderRadius: 8,
+									}}
+								/>
+								
+								<div style={{ 
+									display: 'flex', 
+									gap: 12, 
+									marginTop: 20,
+									justifyContent: 'center',
+								}}>
+									<IonButton 
+										fill="outline" 
+										onClick={handleRetryListening}
+									>
+										<IonIcon slot="start" icon={micOutline} />
+										{editableTranscript ? 'Re-record' : 'Start Speaking'}
+									</IonButton>
+									
+									{editableTranscript && (
+										<IonButton 
+											onClick={handleSaveTranscript}
+											disabled={isSaving}
+										>
+											{isSaving ? (
+												<IonSpinner name="crescent" />
+											) : (
+												<>
+													<IonIcon slot="start" icon={checkmarkOutline} />
+													Save to Inbox
+												</>
+											)}
+										</IonButton>
+									)}
+								</div>
+							</>
+						)}
+					</IonContent>
+				</IonModal>
+				
+				{/* CSS for pulse animation */}
+				<style>{`
+					@keyframes pulse {
+						0% {
+							box-shadow: 0 0 0 0 rgba(var(--ion-color-primary-rgb), 0.7);
+						}
+						70% {
+							box-shadow: 0 0 0 20px rgba(var(--ion-color-primary-rgb), 0);
+						}
+						100% {
+							box-shadow: 0 0 0 0 rgba(var(--ion-color-primary-rgb), 0);
+						}
+					}
+				`}</style>
 			</IonContent>
 		</IonPage>
 	);
