@@ -429,9 +429,14 @@ const InboxScreen: React.FC = () => {
 					</IonList>
 				)}
 				
-				{/* Speech Recognition FAB */}
+				{/* Speech Recognition FAB - Centered and elevated */}
 				{!isInitializing && isAvailable && (
-					<IonFab vertical="bottom" horizontal="end" slot="fixed">
+					<IonFab
+						vertical="bottom"
+						horizontal="center"
+						slot="fixed"
+						style={{ marginBottom: 24 }}
+					>
 						<IonFabButton onClick={handleSpeechFabClick} color="primary">
 							<IonIcon icon={micOutline} />
 						</IonFabButton>
