@@ -220,20 +220,38 @@ const InboxScreen: React.FC = () => {
 	/**
 	 * Handle stop listening
 	 */
-	const handleStopListening = async () => {
-		await stopListening();
+	const handleStopListening = () => {
+		// Don't await - let it run in background to avoid blocking UI
+		stopListening().catch((e) => {
+			console.error('Error stopping speech recognition:', e);
+		});
 	};
 	
 	/**
-	 * Handle modal dismiss
+	 * Handle closing the modal (button click)
 	 */
-	const handleDismissModal = async () => {
+	const handleCloseModal = () => {
+		// Stop listening if active
 		if (isListening) {
-			await stopListening();
+			stopListening().catch((e) => {
+				console.error('Error stopping speech recognition:', e);
+			});
 		}
+		// Clean up state
 		resetSpeech();
 		setEditableTranscript('');
+		// Close modal
 		setShowSpeechModal(false);
+	};
+	
+	/**
+	 * Handle modal dismiss event (triggered after modal is closed)
+	 */
+	const handleModalDidDismiss = () => {
+		// Ensure cleanup happens when modal is dismissed by any means
+		// (swipe down, backdrop tap, programmatic close)
+		resetSpeech();
+		setEditableTranscript('');
 	};
 	
 	/**
@@ -270,7 +288,7 @@ const InboxScreen: React.FC = () => {
 			await loadEntries();
 			
 			// Close modal
-			handleDismissModal();
+			handleCloseModal();
 			
 			presentToast({
 				message: 'Saved to inbox',
@@ -444,9 +462,9 @@ const InboxScreen: React.FC = () => {
 				)}
 				
 				{/* Speech Recognition Modal */}
-				<IonModal 
-					isOpen={showSpeechModal} 
-					onDidDismiss={handleDismissModal}
+				<IonModal
+					isOpen={showSpeechModal}
+					onDidDismiss={handleModalDidDismiss}
 					initialBreakpoint={0.5}
 					breakpoints={[0, 0.5, 0.75]}
 				>
@@ -454,7 +472,7 @@ const InboxScreen: React.FC = () => {
 						<IonToolbar>
 							<IonTitle>Voice Input</IonTitle>
 							<IonButtons slot="end">
-								<IonButton onClick={handleDismissModal}>
+								<IonButton onClick={handleCloseModal}>
 									<IonIcon slot="icon-only" icon={closeOutline} />
 								</IonButton>
 							</IonButtons>

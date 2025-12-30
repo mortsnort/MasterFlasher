@@ -179,28 +179,51 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 	}, [isAvailable, permissionStatus, requestPermission]);
 
 	/**
-	 * Stop listening for speech
+	 * Clean up speech recognition listeners
 	 */
-	const stopListening = useCallback(async (): Promise<void> => {
+	const cleanupListeners = useCallback(async () => {
 		try {
-			await SpeechRecognition.stop();
-			setIsListening(false);
-
-			// Clean up listeners
 			if (partialResultsListenerRef.current) {
 				await partialResultsListenerRef.current.remove();
 				partialResultsListenerRef.current = null;
 			}
+		} catch (e) {
+			console.error('Failed to remove partialResults listener:', e);
+		}
+		
+		try {
 			if (listeningStateListenerRef.current) {
 				await listeningStateListenerRef.current.remove();
 				listeningStateListenerRef.current = null;
 			}
 		} catch (e) {
-			console.error('Failed to stop speech recognition:', e);
-			// Still try to update state
-			setIsListening(false);
+			console.error('Failed to remove listeningState listener:', e);
 		}
 	}, []);
+
+	/**
+	 * Stop listening for speech
+	 */
+	const stopListening = useCallback(async (): Promise<void> => {
+		// Always update UI state first
+		setIsListening(false);
+		
+		try {
+			// Check if actually listening before calling stop
+			const { listening } = await SpeechRecognition.isListening();
+			
+			if (listening) {
+				await SpeechRecognition.stop();
+			}
+		} catch (e) {
+			// Log error with proper serialization
+			const errorMessage = e instanceof Error ? e.message : JSON.stringify(e);
+			console.error('Failed to stop speech recognition:', errorMessage);
+		}
+		
+		// Always clean up listeners regardless of stop result
+		await cleanupListeners();
+	}, [cleanupListeners]);
 
 	/**
 	 * Reset transcript and error
