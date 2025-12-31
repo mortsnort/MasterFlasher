@@ -24,9 +24,9 @@ const schema: Schema = {
 };
 
 // Helper: Split text into chunks at sentence boundaries
-// Reduced to 4000 chars for natural content-based fact limiting
-// Smaller chunks = fewer extractable concepts = natural output limits
-function chunkText(text: string, chunkSize = 4000): string[] {
+// 8000 chars balances API efficiency with context quality
+// Fact batching in flashcard generation handles output limits
+function chunkText(text: string, chunkSize = 8000): string[] {
 	if (text.length <= chunkSize) return [text];
 
 	const chunks: string[] = [];
@@ -86,17 +86,33 @@ async function verifyAndGenerateFacts(text: string, title: string | undefined, u
 	});
 
 	const prompt = buildFactExtractionPrompt(userPrompt, text, title);
+	console.log(`[DEBUG] Fact extraction - Prompt length: ${prompt.length} chars, Text chunk: ${text.length} chars`);
 
 	try {
 		const result = await model.generateContent(prompt);
 		const responseText = result.response.text();
-		const json = JSON.parse(responseText);
+		
+		// DEBUG: Log the raw response for diagnosis
+		console.log(`[DEBUG] Gemini fact response length: ${responseText.length} chars`);
+		console.log(`[DEBUG] Gemini fact response preview: ${responseText.slice(0, 500)}...`);
+		
+		let json;
+		try {
+			json = JSON.parse(responseText);
+		} catch (parseError) {
+			// Log the full response when JSON parsing fails
+			console.error('[DEBUG] JSON PARSE ERROR - Full response:', responseText);
+			console.error('[DEBUG] Parse error:', parseError);
+			throw parseError;
+		}
 
 		// Validate structure locally since we removed strict schema for id/context
 		if (!json.facts || !Array.isArray(json.facts)) {
-			console.warn('Invalid facts structure from chunk', json);
+			console.warn('[DEBUG] Invalid facts structure from chunk:', JSON.stringify(json).slice(0, 500));
 			return [];
 		}
+
+		console.log(`[DEBUG] Successfully parsed ${json.facts.length} facts from chunk`);
 
 		// Map to Fact objects, assigning IDs client-side
 		return json.facts.map((f: { fact: string }) => ({
@@ -106,26 +122,46 @@ async function verifyAndGenerateFacts(text: string, title: string | undefined, u
 		})).filter((f: { id: string; fact: string }) => f.fact && typeof f.fact === 'string');
 
 	} catch (e) {
-		console.error('Gemini Facts Generation Failed for chunk', e);
+		console.error('[DEBUG] Gemini Facts Generation Failed for chunk:', e);
 		return []; // Return empty for this chunk rather than failing everything
 	}
 }
 
 export async function generateFacts(text: string, title?: string): Promise<FactsResponse> {
+	// DEBUG: Log input text size
+	console.log(`[DEBUG] generateFacts called - Input text size: ${text.length} chars, Title: ${title || 'none'}`);
+	
 	// 1. Load the user's custom prompt (or default)
 	const userPrompt = await getFactExtractionPrompt();
 
 	// 2. Chunk the text into smaller pieces for natural content-based limiting
 	const chunks = chunkText(text);
-	console.log(`Processing ${chunks.length} chunks with custom prompt...`);
+	console.log(`[DEBUG] Text split into ${chunks.length} chunks (avg ${Math.round(text.length / chunks.length)} chars each)`);
+	
+	// Warn about potentially problematic chunk counts
+	if (chunks.length > 20) {
+		console.warn(`[DEBUG] WARNING: High chunk count (${chunks.length}) - this will make ${chunks.length} concurrent API calls`);
+	}
 
 	// 3. Process chunks (concurrently for speed, Flash Lite has high TPM)
+	console.log(`[DEBUG] Starting ${chunks.length} concurrent fact extraction requests...`);
 	const results = await Promise.all(
-		chunks.map((chunk) => verifyAndGenerateFacts(chunk, title, userPrompt))
+		chunks.map((chunk, index) => {
+			console.log(`[DEBUG] Processing chunk ${index + 1}/${chunks.length}...`);
+			return verifyAndGenerateFacts(chunk, title, userPrompt);
+		})
 	);
 
 	// 4. Merge results from all chunks
 	const allFacts = results.flat();
+	
+	// DEBUG: Log summary
+	console.log(`[DEBUG] Fact extraction complete - Total facts: ${allFacts.length} from ${chunks.length} chunks`);
+	const successfulChunks = results.filter(r => r.length > 0).length;
+	const failedChunks = chunks.length - successfulChunks;
+	if (failedChunks > 0) {
+		console.warn(`[DEBUG] WARNING: ${failedChunks}/${chunks.length} chunks failed to produce facts`);
+	}
 
 	// 5. Return combined results
 	// Smaller chunks naturally limit facts per chunk, no arbitrary truncation needed

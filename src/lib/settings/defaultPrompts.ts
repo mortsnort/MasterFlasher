@@ -14,13 +14,17 @@
  * Used in: generateFacts.ts
  * Dynamic content appended: Context/Title and Text
  */
-export const DEFAULT_FACT_EXTRACTION_PROMPT = `Extract explicit, relevant key concepts stated in the text.
+export const DEFAULT_FACT_EXTRACTION_PROMPT = 
+`Extract explicit, atomic factual statements from the provided text.
 
-Constraints:
-1. Each key concept must be a single declarative sentence.
-2. Maximum length per key concept: 240 characters.
-3. No inference or interpretation - only explicit concepts from the source material.
-4. Prioritize the most significant and unique concepts.`;
+Rules:
+1. Each fact must be explicitly stated in the text (no inference, paraphrasing, or interpretation).
+2. Each fact must be atomic (one fact per sentence; no “and”, “or”, or compound clauses).
+3. Use clear declarative sentences.
+4. Maximum length per fact: 240 characters.
+5. Preserve original terminology and wording as much as possible.
+6. Do not include obvious statements or filler.
+7. Do not summarize — extract facts as written.`;
 
 /**
  * Default prompt for generating flashcards from facts.
@@ -28,9 +32,20 @@ Constraints:
  * Used in: generateFlashcards.ts
  * Dynamic content appended: Concepts JSON array
  */
-export const DEFAULT_FLASHCARD_CREATION_PROMPT = `Using these concepts, generate a flash card for each concept.
-Front should be a clear question/prompt; back is the answer.
-Add 1-4 short tags.
+export const DEFAULT_FLASHCARD_CREATION_PROMPT = 
+`Using the provided concepts, generate one recall-optimized flashcard per concept.
+
+Rules:
+1. The front must require active recall (the answer must not appear or be hinted at on the front).
+2. The front should ask for one specific, unambiguous answer.
+3. The back should be concise (ideally a word, phrase, or short sentence).
+4. Avoid multiple facts, lists, or “and/or” questions.
+5. Prefer “What is / Who is / Which / When / Where” formulations when appropriate.
+
+Formatting:
+Front: a clear question or prompt
+Back: the correct answer only
+Tags: 1–4 short, relevant tags
 Deck Name: MasterFlasher`;
 
 /**
