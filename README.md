@@ -8,7 +8,7 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 <p align="center">
   <img src="./screenshots/ss_pdf1-portrait.png" width="240" />
-  <img src="./screenshots/ss_pdf1-portrait.png" width="240" />
+  <img src="./screenshots/ss_pdf2-portrait.png" width="240" />
   <img src="./screenshots/ss_pdf4-portrait.png" width="240" />
 </p>
 
