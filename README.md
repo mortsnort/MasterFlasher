@@ -6,6 +6,13 @@
 
 MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid flashcards using Gemini. Share content from any app, it's saved silently to your inbox, then process items at your own pace.
 
+<p align="center">
+  <img src="./screenshots/ss_pdf1.png" width="240" />
+  <img src="./screenshots/ss_pdf2.png" width="240" />
+  <img src="./screenshots/ss_pdf3.png" width="240" />
+  <img src="./screenshots/ss_pdf4.png" width="240" />
+</p>
+
 ## Features
 
 - **Silent Share**: Share text, URLs, or PDFs from any app — content is saved to inbox without opening the app
@@ -98,7 +105,7 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
 
 ### Voice Input
 
-- **Add via speech**: Tap the microphone button (🎤) in the bottom-right corner
+- **Add via speech**: Tap the microphone button (🎤)
 - **Grant permission**: Allow microphone access when prompted (first use only)
 - **Speak clearly**: The app transcribes your speech in real-time
 - **Edit before saving**: Review and edit the transcribed text if needed
