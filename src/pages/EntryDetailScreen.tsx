@@ -46,6 +46,7 @@ import WebClipper from '../plugins/WebClipper';
 import AnkiDroid from '../plugins/AnkiDroid';
 import { generateFacts } from '../lib/gemini/generateFacts';
 import { generateFlashcards } from '../lib/gemini/generateFlashcards';
+import { scoreFacts, filterScoredFacts } from '../lib/gemini/scoreFacts';
 import { hasValidConfig } from '../lib/settings/geminiConfig';
 import { extractPdfText } from '../lib/pdf/extractPdfText';
 
@@ -55,6 +56,7 @@ type UIState =
 	| 'READY'
 	| 'EXTRACTING'
 	| 'GENERATING_FACTS'
+	| 'SCORING_FACTS'
 	| 'GENERATING_CARDS'
 	| 'REVIEW_CARDS'
 	| 'ERROR';
@@ -249,11 +251,12 @@ const EntryDetailScreen: React.FC = () => {
 			// Save deck name first
 			await Inbox.updateDeckName({ entryId: entry.id, deckName: finalDeckName });
 			
+			// Step 1: Extract facts
 			setState('GENERATING_FACTS');
-			setLog('Generating facts with Gemini...');
+			setLog('Extracting facts with Gemini...');
 			
 			const factsResp = await generateFacts(textToProcess, title);
-			setLog(`Generated ${factsResp.facts.length} facts`);
+			setLog(`Extracted ${factsResp.facts.length} facts`);
 			
 			// Check if no facts were extracted
 			if (factsResp.facts.length === 0) {
@@ -266,10 +269,32 @@ const EntryDetailScreen: React.FC = () => {
 				return;
 			}
 			
-			setState('GENERATING_CARDS');
-			setLog('Generating flashcards...');
+			// Step 2: Score facts for learning value
+			setState('SCORING_FACTS');
+			setLog(`Scoring ${factsResp.facts.length} facts for learning value...`);
 			
-			const cardsResp = await generateFlashcards(factsResp.facts);
+			const scoredFacts = await scoreFacts(factsResp.facts);
+			
+			// Step 3: Filter to high-value facts
+			const filteredFacts = filterScoredFacts(scoredFacts);
+			setLog(`Selected ${filteredFacts.length} high-value facts from ${factsResp.facts.length} total`);
+			
+			// Check if no facts passed filtering
+			if (filteredFacts.length === 0) {
+				setErrorMsg(
+					'No high-value facts were found in this content. ' +
+					'The extracted concepts may be too generic or obvious. ' +
+					'Try a different source with more specific, non-obvious information.'
+				);
+				setState('ERROR');
+				return;
+			}
+			
+			// Step 4: Generate flashcards from filtered facts
+			setState('GENERATING_CARDS');
+			setLog(`Generating flashcards from ${filteredFacts.length} facts...`);
+			
+			const cardsResp = await generateFlashcards(filteredFacts);
 			
 			// Check if no cards were generated
 			if (cardsResp.cards.length === 0) {
@@ -685,7 +710,7 @@ const EntryDetailScreen: React.FC = () => {
 					<IonText color="medium">
 						<p>{log}</p>
 					</IonText>
-					{(state === 'LOADING' || state === 'EXTRACTING' || state === 'GENERATING_FACTS' || state === 'GENERATING_CARDS') && (
+					{(state === 'LOADING' || state === 'EXTRACTING' || state === 'GENERATING_FACTS' || state === 'SCORING_FACTS' || state === 'GENERATING_CARDS') && (
 						<IonProgressBar type="indeterminate" />
 					)}
 				</div>

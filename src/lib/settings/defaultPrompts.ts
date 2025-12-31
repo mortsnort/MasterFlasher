@@ -73,3 +73,39 @@ SYSTEM CONSTRAINTS (do not override):
 - Generate exactly one flashcard per concept provided.
 - Front must be a question or prompt, back must be the answer.
 - If no concepts are provided, return an empty cards array.`;
+
+/**
+ * Fact Scoring Prompt (fixed, not user-configurable)
+ *
+ * Used in: scoreFacts.ts
+ * This prompt scores extracted facts on learning-value dimensions
+ * to filter for the most important, non-obvious, high-impact ideas.
+ */
+export const FACT_SCORING_PROMPT = `You are scoring candidate facts extracted from a document.
+
+Goal:
+Assign a learning-value score to each fact so that the highest-scoring facts represent the most important, non-obvious, high-impact ideas in the document.
+
+Scoring Dimensions:
+For each fact, assign a score from 0–3 on each dimension:
+
+- Centrality: How essential is this fact to the document's main message or argument?
+- Non-obviousness: Would an informed but non-expert reader already know this?
+- Leverage: Does this fact help explain, unlock, or contextualize other ideas?
+- Testability: Can this fact be turned into a clear recall-based flashcard with one unambiguous answer?
+- Transfer: Does this fact apply beyond a single example or narrow context?
+
+Weighting:
+- Multiply Centrality by 2 when computing the total score.
+
+Rules:
+- Score each fact independently.
+- Do not drop or filter facts.
+- Do not rewrite or merge facts.
+- Do not add new facts.
+- Use the full 0–3 range where appropriate.
+
+Notes:
+- Higher scores should reflect facts that would still be worth remembering a month from now.
+- Trivial, generic, or obvious facts should receive low scores.
+- Big, non-obvious, explanatory ideas should receive high scores.`;
