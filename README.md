@@ -211,7 +211,7 @@ Each card generation uses multiple Gemini API calls:
 3. **Flashcard Generation**  
    The remaining facts are converted into question–answer flashcards.
 
-## API Key Configuration
+### API Key Configuration
 
 ### Development Mode
 Uses `.env` file variables (`VITE_GEMINI_API_KEY`, `VITE_GEMINI_MODEL_NAME`).
