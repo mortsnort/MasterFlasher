@@ -56,6 +56,8 @@ jobs:
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: 34.0.0
+
         ## The action outputs the signed path to ${{ steps.sign_app.outputs.signedReleaseFile }}
 
       # 8. Create GitHub Release and Upload APK
