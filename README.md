@@ -87,15 +87,11 @@ _This section defines the complete end-to-end behavior of the app._
 - Manual per-card review
 - Automatic entry cleanup
 
----
-
 ## UI Notes
 
 - Inbox supports pull-to-refresh.
 - Swipe left on an entry to delete it.
 - Entries with generated cards display a lock icon and **Cards Ready** badge.
-
----
 
 ### Voice Input UI
 
@@ -103,13 +99,9 @@ _This section defines the complete end-to-end behavior of the app._
 - Speech is transcribed live.
 - Users may edit the transcription before saving it to the inbox.
 
----
-
 ## User-Editable Prompts
 
 MasterFlasher allows users to customize the prompts sent to Gemini for fact extraction and flashcard generation without modifying app code.
-
----
 
 ## Bring Your Own Key (BYOK)
 
@@ -124,8 +116,6 @@ This ensures:
 - User ownership of API usage and quotas
 - No shared keys
 - No server-side proxying
-
----
 
 ## API Key Storage & Security
 
