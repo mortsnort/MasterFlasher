@@ -115,7 +115,7 @@ This ensures:
 
 ### API Key Storage & Security
 - API keys are stored **only on the device**.
-- Keys are encrypted and persisted using **Android KeyStore–backed secure storage**.
+- Keys are encrypted and persisted using **Android KeyStore–backed secure storage** (capacitor-secure-storage-plugin).
 - Keys are never logged, transmitted to third-party servers, or stored in plaintext.
 
 ---
