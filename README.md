@@ -12,6 +12,17 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
   <img src="./screenshots/ss_pdf4-portrait.png" width="240" />
 </p>
 
+## Installation
+
+Download the latest APK from the [Releases](https://github.com/mortsnort/MasterFlasher/releases/) page:
+
+1. Go to the [latest release](https://github.com/mortsnort/MasterFlasher/releases/latest)
+2. Download the `.apk` file under "Assets"
+3. Open the APK on your Android device to install
+4. You may need to enable "Install from unknown sources" in your device settings
+
+> **Note**: This app requires [AnkiDroid](https://play.google.com/store/apps/details?id=com.ichi2.anki) to be installed on your device.
+
 ## Features
 
 - **Silent Share**: Share text, URLs, or PDFs from any app — content is saved to inbox without opening the app
