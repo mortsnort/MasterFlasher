@@ -1,5 +1,7 @@
 package com.snortstudios.masterflasher.db;
 
+import android.annotation.SuppressLint;
+
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
@@ -68,6 +70,7 @@ public class InboxEntry {
     /**
      * Factory method to create a new entry from shared text or URL content
      */
+    @SuppressLint("DirectSystemCurrentTimeMillisUsage")
     public static InboxEntry create(String id, String contentType, String content) {
         InboxEntry entry = new InboxEntry();
         entry.id = id;
@@ -86,6 +89,7 @@ public class InboxEntry {
      * @param capacitorUrl Capacitor-compatible file URL for pdf.js access
      * @param originalFilename Original PDF filename for display
      */
+    @SuppressLint("DirectSystemCurrentTimeMillisUsage")
     public static InboxEntry createPdf(String id, String capacitorUrl, String originalFilename) {
         InboxEntry entry = new InboxEntry();
         entry.id = id;

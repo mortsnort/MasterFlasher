@@ -1,5 +1,7 @@
 package com.snortstudios.masterflasher.plugins;
 
+import android.annotation.SuppressLint;
+
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -380,6 +382,7 @@ public class InboxPlugin extends Plugin {
         return obj;
     }
     
+    @SuppressLint("DirectSystemCurrentTimeMillisUsage")
     private InboxEntry jsonToEntry(JSObject obj) {
         InboxEntry entry = new InboxEntry();
         entry.id = obj.getString("id", UUID.randomUUID().toString());

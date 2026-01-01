@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">MasterFlasher</string>
-    <string name="title_activity_main">MasterFlasher</string>
+    <string name="title_activity_main">@string/app_name</string>
     <string name="package_name">com.snortstudios.masterflasher</string>
-    <string name="custom_url_scheme">com.snortstudios.masterflasher</string>
+    <string name="custom_url_scheme">@string/package_name</string>
 </resources>
