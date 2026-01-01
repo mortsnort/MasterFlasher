@@ -4,7 +4,9 @@
 
 <h1 align="center">MasterFlasher</h1>
 
-MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid flashcards using Gemini. Share content from any app, it's saved silently to your inbox, then process items at your own pace.
+MasterFlasher is an Android app that converts shared text, URLs, local PDF files, or voice input into AnkiDroid flashcards using Gemini.
+
+Content shared from any app is silently saved to an inbox. Users later extract readable text (for URLs and PDFs), generate flashcards, review them, and add selected cards to AnkiDroid.
 
 <p align="center">
   <img src="./screenshots/ss_pdf1-portrait.png" width="240" />
@@ -12,59 +14,168 @@ MasterFlasher is an Android app that turns shared text or URLs into AnkiDroid fl
   <img src="./screenshots/ss_pdf4-portrait.png" width="240" />
 </p>
 
+---
+
 ## Installation
 
-Download the latest APK from the [Releases](https://github.com/mortsnort/MasterFlasher/releases/) page:
+Download the latest APK from the GitHub Releases page:
 
 1. Go to the [latest release](https://github.com/mortsnort/MasterFlasher/releases/latest)
-2. Download the `.apk` file under "Assets"
+2. Download the `.apk` file under **Assets**
 3. Open the APK on your Android device to install
-4. You may need to enable "Install from unknown sources" in your device settings
+4. Enable **Install from unknown sources** if prompted
 
-> **Note**: This app requires [AnkiDroid](https://play.google.com/store/apps/details?id=com.ichi2.anki) to be installed on your device.
+> **Note**: This app requires [AnkiDroid](https://play.google.com/store/apps/details?id=com.ichi2.anki) to be installed on the device.
 
-## Features
+---
 
-- **Silent Share**: Share text, URLs, or PDFs from any app — content is saved to inbox without opening the app
-- **Voice Input**: Speak text directly into the app using the microphone button
-- **Inbox-based workflow**: Process multiple items at your own pace
-- **Web clipper**: Extract clean article text from URLs using Readability
-- **PDF extraction**: Extract text from PDF files using pdf.js
-- **Gemini-powered**: Automatic fact extraction and flashcard generation
-- **Deck customization**: Set custom deck name per entry
-- **Manual review**: Review and add cards one by one
-- **Auto-cleanup**: Entries are removed automatically when all cards are added
-- **Direct AnkiDroid integration**: Deck + model creation, note insertion
+## How MasterFlasher Works
+_This section defines the complete end-to-end behavior of the app._
 
-## How It Works
+1. **Input**
+   - Content enters the app via Android Share (text, URL, PDF) or via in-app voice dictation.
+   - Share actions are silent: the UI does not open.
 
-1. **Share or Speak**: Share text, a URL, or a PDF to MasterFlasher from any Android app, or tap the microphone button to speak.
-2. **Silent Save**: Content is saved to your inbox with a toast confirmation — no UI opens (for shares).
-3. **Open App**: Launch MasterFlasher to see your inbox of saved items.
-4. **Process**: Tap an entry, extract content (for URLs/PDFs), set deck name, generate cards.
-5. **Review & Add**: Review each card and add the ones you want to AnkiDroid.
-6. **Auto-remove**: Once all cards are added, the entry is automatically removed.
+2. **Inbox Persistence**
+   - Each input is stored as an inbox entry in a local Room-backed SQLite database.
+   - A toast confirms successful save.
+
+3. **Content Extraction**
+   - URLs: Opens an in-app browser; when the user taps **Extract to Anki**, injected JavaScript (Readability) extracts the page’s readable article text.
+   - PDFs: Users share a local PDF file (e.g., from a file manager) to MasterFlasher; the file reference is saved to the inbox and text is extracted on demand using pdf.js.
+   - Plain text and voice input require no extraction.
+
+4. **Card Generation**
+   - Extracted text is sent to Gemini for flashcard generation.
+   - Gemini responses are required to be strict JSON.
+   - Users may configure a custom deck name per entry.
+
+5. **Review & Commit**
+   - Cards are reviewed individually.
+   - Accepted cards are inserted into AnkiDroid.
+   - Decks and note models are created automatically if they do not exist.
+
+6. **Lifecycle Cleanup**
+   - Once all generated cards are added, the inbox entry is automatically deleted.
+
+
+---
+
+## Capabilities
+
+### Inputs
+- Android Share: text, URLs, PDFs
+- In-app voice dictation
+
+### Extraction
+- Readability-based article extraction for URLs
+- pdf.js text extraction for PDFs
+
+### AI
+- Gemini-powered fact extraction and flashcard generation
+- User-editable prompts
+- Strict JSON schema validation
+
+### AnkiDroid Integration
+- Deck creation
+- Note model creation (`com.snortstudios.masterflasher`)
+- Direct note insertion
+
+### UX
+- Silent share handling
+- Inbox-based deferred processing
+- Manual per-card review
+- Automatic entry cleanup
+
+---
+
+## UI Notes
+
+- Inbox supports pull-to-refresh.
+- Swipe left on an entry to delete it.
+- Entries with generated cards display a lock icon and **Cards Ready** badge.
+
+---
+
+### Voice Input UI
+
+- Tap the microphone button (🎤) to dictate text.
+- Speech is transcribed live.
+- Users may edit the transcription before saving it to the inbox.
+
+---
+
+## User-Editable Prompts
+
+MasterFlasher allows users to customize the prompts sent to Gemini for fact extraction and flashcard generation without modifying app code.
+
+---
+
+## Bring Your Own Key (BYOK)
+
+MasterFlasher operates on a **Bring Your Own Key (BYOK)** model.
+
+- Users supply their own Gemini API key.
+- No API keys are bundled with the app.
+- All AI requests are made directly from the device using the user’s key.
+- Each card generation involves multiple Gemini API calls as part of a quality-focused pipeline.
+
+This ensures:
+- User ownership of API usage and quotas
+- No shared keys
+- No server-side proxying
+
+---
+
+## API Key Storage & Security
+
+- API keys are stored **only on the device**.
+- Keys are encrypted and persisted using **Android KeyStore–backed secure storage**.
+- Keys are never logged, transmitted to third-party servers, or stored in plaintext.
+
+---
 
 ## Project Structure
 
-- `src/pages/InboxScreen.tsx` - Main inbox screen showing saved entries with voice input FAB
-- `src/pages/EntryDetailScreen.tsx` - Card generation and review for a single entry
-- `src/pages/SettingsScreen.tsx` - API key and settings configuration
-- `src/plugins/Inbox.ts` - Inbox database plugin interface
-- `src/plugins/SpeechRecognition.ts` - Speech recognition plugin wrapper
-- `src/hooks/useSpeechRecognition.ts` - Custom hook for speech recognition
-- `src/lib/gemini/` - Gemini prompts and response parsing
-- `android/app/src/main/java/com/snortstudios/masterflasher/db/` - Room database entities and DAO
-- `android/app/src/main/java/com/snortstudios/masterflasher/plugins/` - Native Capacitor plugins
+- `src/pages/InboxScreen.tsx`  
+  Main inbox screen and voice input FAB
 
-## Requirements
+- `src/pages/EntryDetailScreen.tsx`  
+  Content extraction, card generation, and review UI
+
+- `src/pages/SettingsScreen.tsx`  
+  API key and model configuration
+
+- `src/plugins/Inbox.ts`  
+  Inbox database plugin interface
+
+- `src/plugins/SpeechRecognition.ts`  
+  Native speech recognition wrapper
+
+- `src/hooks/useSpeechRecognition.ts`  
+  Speech recognition hook
+
+- `src/lib/gemini/`  
+  Gemini prompts, schemas, and response parsing
+
+- `android/app/src/main/java/com/snortstudios/masterflasher/db/`  
+  Room entities and DAOs
+
+- `android/app/src/main/java/com/snortstudios/masterflasher/plugins`  
+  Native Capacitor plugins
+
+---
+
+## Build Requirements
 
 - Node.js + npm
-- Android Studio (for device/emulator builds)
-- AnkiDroid installed on the device
+- Android Studio (for emulator or device builds)
+- AnkiDroid installed on the target device
 - Gemini API key
 
-## Setup
+---
+
+## Setup (Development)
 
 1. Install dependencies
    ```bash
@@ -93,34 +204,7 @@ Download the latest APK from the [Releases](https://github.com/mortsnort/MasterF
    ```bash
    npx cap open android
    ```
-
-## Usage
-
-1. **Share content**: Share text, a URL, or a PDF to MasterFlasher from any Android app.
-2. **Content saved**: You'll see a toast "Saved to inbox" — the app doesn't open.
-3. **Open MasterFlasher**: Launch the app to see your inbox of saved items.
-4. **Tap an entry**: Opens the detail screen for that content.
-5. **For URLs**: Tap "Extract Content from URL" to fetch the article text.
-6. **For PDFs**: Tap "Extract Text from PDF" to extract the document text.
-7. **Set deck name**: Choose a custom deck name (default: "MasterFlasher").
-8. **Generate cards**: Tap "Generate Cards" to create flashcards using Gemini.
-9. **Review & add**: Tap "Add" on each card you want to keep.
-10. **Auto-cleanup**: Once all cards are added, the entry is removed from inbox.
-
-### Managing Entries
-
-- **Pull to refresh**: Pull down on the inbox to reload entries
-- **Delete entries**: Swipe left on an entry and tap the trash icon
-- **Locked entries**: Entries with generated cards show a lock icon and "Cards Ready" badge
-
-### Voice Input
-
-- **Add via speech**: Tap the microphone button (🎤)
-- **Grant permission**: Allow microphone access when prompted (first use only)
-- **Speak clearly**: The app transcribes your speech in real-time
-- **Edit before saving**: Review and edit the transcribed text if needed
-- **Save to inbox**: Tap "Save to Inbox" to add the entry
-
+   
 ## Configuration Notes
 
 - Default deck name is `MasterFlasher` (customizable per entry).
@@ -128,6 +212,19 @@ Download the latest APK from the [Releases](https://github.com/mortsnort/MasterF
 - Gemini output is expected to be strict JSON; failures will surface in the UI log.
 - Default Gemini model is `gemini-2.5-flash-lite` when not specified.
 - Generated cards and entries are stored in a local SQLite database.
+
+### Gemini Generation Pipeline
+
+Each card generation uses multiple Gemini API calls:
+
+1. **Fact Extraction**  
+   The source text is analyzed to produce a list of candidate atomic facts.
+
+2. **Fact Scoring & Filtering**  
+   The fact list is scored for usefulness and relevance; low-quality or redundant facts are filtered out.
+
+3. **Flashcard Generation**  
+   The remaining facts are converted into question–answer flashcards.
 
 ## API Key Configuration
 
