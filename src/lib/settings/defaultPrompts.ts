@@ -33,19 +33,19 @@ Rules:
  * Dynamic content appended: Concepts JSON array
  */
 export const DEFAULT_FLASHCARD_CREATION_PROMPT = 
-`Using the provided concepts, generate one recall-optimized flashcard per concept.
+`Using the provided concepts, generate **one recall-optimized flashcard per concept**.
 
 Rules:
-1. The front must require active recall (the answer must not appear or be hinted at on the front).
-2. The front should ask for one specific, unambiguous answer.
-3. The back should be concise (ideally a word, phrase, or short sentence).
-4. Avoid multiple facts, lists, or “and/or” questions.
+1. The front must require active recall; the answer must not appear or be implied.
+2. Ask for **one specific fact** with a **concrete answer**.
+3. The back must add information, not restate the concept.
+4. **No tautological or definition-echo cards**.
 5. Prefer “What is / Who is / Which / When / Where” formulations when appropriate.
 
-Formatting:
-Front: a clear question or prompt
-Back: the correct answer only
-Tags: 1–4 short, relevant tags
+Format:
+Front: <question>
+Back: <concise answer>
+Tags: 1–4 short tags
 Deck Name: MasterFlasher`;
 
 /**
