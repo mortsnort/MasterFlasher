@@ -66,6 +66,7 @@ _This section defines the complete end-to-end behavior of the app._
 ### Inputs
 - Android Share: text, URLs, PDFs
 - In-app voice dictation
+- Camera OCR: Connects to device camera to capture and extract text from physical documents
 
 ### Extraction
 - Readability-based article extraction for URLs
