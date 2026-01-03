@@ -121,7 +121,7 @@ public class CameraOCRActivity extends AppCompatActivity {
 
 		showLoading(true);
 
-		File photoFile = new File(getCacheDir(), "ocr_capture_" + System.currentTimeMillis() + ".jpg");
+		File photoFile = new File(getCacheDir(), "ocr_capture_" + java.util.UUID.randomUUID().toString() + ".jpg");
 
 		ImageCapture.OutputFileOptions outputOptions = new ImageCapture.OutputFileOptions.Builder(photoFile).build();
 
@@ -185,7 +185,7 @@ public class CameraOCRActivity extends AppCompatActivity {
 	}
 
 	private void startCrop(Uri sourceUri) {
-		File cropFile = new File(getCacheDir(), "ocr_crop_" + System.currentTimeMillis() + ".jpg");
+		File cropFile = new File(getCacheDir(), "ocr_crop_" + java.util.UUID.randomUUID().toString() + ".jpg");
 		Uri destinationUri = Uri.fromFile(cropFile);
 
 		UCrop.Options options = new UCrop.Options();
