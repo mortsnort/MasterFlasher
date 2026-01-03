@@ -115,7 +115,7 @@ dependencies {
 }
 ```
 
-**Note on CameraX Version**: User requested 1.5.2, but the latest stable is 1.5.0-alpha03. Will use this as it provides the features needed. If a stable 1.5.x is preferred, can fall back to 1.4.x stable.
+**Note on CameraX Version**: Use 1.5.2 as requested.
 
 ### Android Permissions (AndroidManifest.xml)
 
@@ -123,11 +123,11 @@ dependencies {
 <!-- Camera permission for capturing images -->
 <uses-permission android:name="android.permission.CAMERA" />
 
-<!-- For gallery access on older Android versions -->
-<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+<!-- For gallery access on older Android versions (only if using legacy picker) -->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
     android:maxSdkVersion="32" />
 
-<!-- For Android 13+ photo picker -->
+<!-- For Android 13+ gallery access (only if using legacy picker) -->
 <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
 <!-- Camera feature declaration -->
@@ -164,13 +164,12 @@ public class CameraOCRPlugin extends Plugin {
     
     @PluginMethod
     public void captureOCR(PluginCall call) {
-        // Launch CameraOCRActivity
-        // Handle result via onActivityResult
+        // saveCall(call) and start activity for result
     }
     
     @Override
     protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
-        // Process OCR result and return to JS
+        // Retrieve saved call and resolve/reject with OCR result
     }
 }
 ```
@@ -290,7 +289,7 @@ export function useCameraOCR(): UseCameraOCRReturn {
 ### 6. InboxScreen Updates
 
 ```tsx
-// Two FABs side by side at bottom center
+// Two FABs side by side at bottom center (Android-only)
 <div style={{ 
     position: 'fixed', 
     bottom: 24, 
@@ -382,6 +381,15 @@ export function useCameraOCR(): UseCameraOCRReturn {
 | OCR extraction fails | Show error in activity, allow retry |
 | No text detected | Show message "No text found in image", allow retry |
 | User cancels at any step | Return to inbox gracefully, no entry created |
+
+## Platform and Theme Notes
+
+- **Platform gating**: Only show/enable the camera FAB and hook on Android (native plugin only).
+- **Material theme**: If the camera activity uses Material Components widgets, give `CameraOCRActivity` a MaterialComponents theme (or avoid Material-only widgets in its layout).
+
+## Android Manifest Notes
+
+- Register `CameraOCRActivity` with `android:exported="false"` since it is internal-only.
 
 ## Testing Checklist
 
