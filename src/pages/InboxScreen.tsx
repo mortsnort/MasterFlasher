@@ -20,7 +20,6 @@ import {
 	IonItemOption,
 	IonChip,
 	IonSpinner,
-	IonFab,
 	IonFabButton,
 	IonModal,
 	IonTextarea,
@@ -41,10 +40,12 @@ import {
 	stopOutline,
 	closeOutline,
 	checkmarkOutline,
+	cameraOutline,
 } from 'ionicons/icons';
 import Inbox from '../plugins/Inbox';
 import type { InboxEntry } from '../plugins/Inbox';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useCameraOCR } from '../hooks/useCameraOCR';
 
 /**
  * Format timestamp to relative time string
@@ -52,12 +53,12 @@ import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 function formatRelativeTime(timestamp: number): string {
 	const now = Date.now();
 	const diff = now - timestamp;
-	
+
 	const seconds = Math.floor(diff / 1000);
 	const minutes = Math.floor(seconds / 60);
 	const hours = Math.floor(minutes / 60);
 	const days = Math.floor(hours / 24);
-	
+
 	if (days > 0) {
 		return days === 1 ? '1 day ago' : `${days} days ago`;
 	}
@@ -74,7 +75,7 @@ function formatRelativeTime(timestamp: number): string {
  * Generate a UUID v4
  */
 function generateUUID(): string {
-	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
 		const r = Math.random() * 16 | 0;
 		const v = c === 'x' ? r : (r & 0x3 | 0x8);
 		return v.toString(16);
@@ -86,12 +87,12 @@ const InboxScreen: React.FC = () => {
 	const [entries, setEntries] = useState<InboxEntry[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	
+
 	// Speech recognition state
 	const [showSpeechModal, setShowSpeechModal] = useState(false);
 	const [editableTranscript, setEditableTranscript] = useState('');
 	const [isSaving, setIsSaving] = useState(false);
-	
+
 	const {
 		isAvailable,
 		isListening,
@@ -103,7 +104,26 @@ const InboxScreen: React.FC = () => {
 		stopListening,
 		reset: resetSpeech,
 	} = useSpeechRecognition();
-	
+
+	const {
+		isAvailable: isCameraAvailable,
+		isProcessing: isCameraProcessing,
+		extractedText,
+		error: cameraError,
+		openCamera,
+		reset: resetCamera,
+	} = useCameraOCR();
+
+	const [showOCRModal, setShowOCRModal] = useState(false);
+
+	// Update editable transcript when text is extracted from camera
+	useEffect(() => {
+		if (extractedText) {
+			setEditableTranscript(extractedText);
+			setShowOCRModal(true);
+		}
+	}, [extractedText]);
+
 	const [presentToast] = useIonToast();
 
 	/**
@@ -141,7 +161,7 @@ const InboxScreen: React.FC = () => {
 			listener.then(handle => handle.remove());
 		};
 	}, [loadEntries]);
-	
+
 	// Update editable transcript when speech recognition updates
 	useEffect(() => {
 		if (transcript) {
@@ -183,7 +203,7 @@ const InboxScreen: React.FC = () => {
 	const navigateToSettings = () => {
 		history.push('/settings');
 	};
-	
+
 	/**
 	 * Handle FAB click - open speech modal and start listening
 	 */
@@ -196,7 +216,7 @@ const InboxScreen: React.FC = () => {
 			});
 			return;
 		}
-		
+
 		if (permissionStatus === 'denied') {
 			presentToast({
 				message: 'Microphone permission was denied. Please enable it in settings.',
@@ -205,18 +225,18 @@ const InboxScreen: React.FC = () => {
 			});
 			return;
 		}
-		
+
 		// Reset state and open modal
 		resetSpeech();
 		setEditableTranscript('');
 		setShowSpeechModal(true);
-		
+
 		// Start listening after a short delay to let the modal open
 		setTimeout(() => {
 			startListening();
 		}, 300);
 	};
-	
+
 	/**
 	 * Handle stop listening
 	 */
@@ -226,7 +246,7 @@ const InboxScreen: React.FC = () => {
 			console.error('Error stopping speech recognition:', e);
 		});
 	};
-	
+
 	/**
 	 * Handle closing the modal (button click)
 	 */
@@ -243,23 +263,48 @@ const InboxScreen: React.FC = () => {
 		// Close modal
 		setShowSpeechModal(false);
 	};
-	
+
 	/**
 	 * Handle modal dismiss event (triggered after modal is closed)
 	 */
 	const handleModalDidDismiss = () => {
 		// Ensure cleanup happens when modal is dismissed by any means
-		// (swipe down, backdrop tap, programmatic close)
 		resetSpeech();
+		resetCamera();
 		setEditableTranscript('');
 	};
-	
+
+	/**
+	 * Handle close OCR modal
+	 */
+	const handleCloseOCRModal = () => {
+		resetCamera();
+		setEditableTranscript('');
+		setShowOCRModal(false);
+	};
+
+	/**
+	 * Handle Camera FAB click
+	 */
+	const handleCameraFabClick = async () => {
+		if (!isCameraAvailable) {
+			presentToast({
+				message: 'Camera OCR is not available on this device',
+				duration: 3000,
+				color: 'warning',
+			});
+			return;
+		}
+
+		await openCamera();
+	};
+
 	/**
 	 * Handle save transcript to inbox
 	 */
 	const handleSaveTranscript = async () => {
 		const textToSave = editableTranscript.trim();
-		
+
 		if (!textToSave) {
 			presentToast({
 				message: 'Please speak or enter some text to save',
@@ -268,9 +313,9 @@ const InboxScreen: React.FC = () => {
 			});
 			return;
 		}
-		
+
 		setIsSaving(true);
-		
+
 		try {
 			// Create new inbox entry
 			const newEntry: InboxEntry = {
@@ -281,15 +326,15 @@ const InboxScreen: React.FC = () => {
 				isLocked: false,
 				createdAt: Date.now(),
 			};
-			
+
 			await Inbox.saveEntry({ entry: newEntry });
-			
+
 			// Refresh entries
 			await loadEntries();
-			
+
 			// Close modal
 			handleCloseModal();
-			
+
 			presentToast({
 				message: 'Saved to inbox',
 				duration: 2000,
@@ -306,7 +351,7 @@ const InboxScreen: React.FC = () => {
 			setIsSaving(false);
 		}
 	};
-	
+
 	/**
 	 * Handle retry speech recognition
 	 */
@@ -417,9 +462,9 @@ const InboxScreen: React.FC = () => {
 													? entry.title || 'PDF Document'
 													: entry.preview}
 										</p>
-										<p style={{ 
-											display: 'flex', 
-											alignItems: 'center', 
+										<p style={{
+											display: 'flex',
+											alignItems: 'center',
 											gap: 4,
 											fontSize: '0.8em',
 											color: 'var(--ion-color-medium)'
@@ -435,8 +480,8 @@ const InboxScreen: React.FC = () => {
 									)}
 								</IonItem>
 								<IonItemOptions side="end">
-									<IonItemOption 
-										color="danger" 
+									<IonItemOption
+										color="danger"
 										onClick={() => deleteEntry(entry)}
 									>
 										<IonIcon slot="icon-only" icon={trashOutline} />
@@ -446,21 +491,35 @@ const InboxScreen: React.FC = () => {
 						))}
 					</IonList>
 				)}
-				
-				{/* Speech Recognition FAB - Centered and elevated */}
-				{!isInitializing && isAvailable && (
-					<IonFab
-						vertical="bottom"
-						horizontal="center"
-						slot="fixed"
-						style={{ marginBottom: 24 }}
-					>
+
+				{/* FABs Container */}
+				<div
+					slot="fixed"
+					style={{
+						position: 'fixed',
+						bottom: 24,
+						left: '50%',
+						transform: 'translateX(-50%)',
+						display: 'flex',
+						gap: 16,
+						zIndex: 1000,
+					}}
+				>
+					{/* Camera FAB */}
+					{isCameraAvailable && (
+						<IonFabButton onClick={handleCameraFabClick} color="secondary" disabled={isCameraProcessing}>
+							{isCameraProcessing ? <IonSpinner name="crescent" /> : <IonIcon icon={cameraOutline} />}
+						</IonFabButton>
+					)}
+
+					{/* Speech Recognition FAB */}
+					{!isInitializing && isAvailable && (
 						<IonFabButton onClick={handleSpeechFabClick} color="primary">
 							<IonIcon icon={micOutline} />
 						</IonFabButton>
-					</IonFab>
-				)}
-				
+					)}
+				</div>
+
 				{/* Speech Recognition Modal */}
 				<IonModal
 					isOpen={showSpeechModal}
@@ -482,7 +541,7 @@ const InboxScreen: React.FC = () => {
 						{/* Listening State */}
 						{isListening && (
 							<div style={{ textAlign: 'center', marginBottom: 20 }}>
-								<div 
+								<div
 									style={{
 										width: 80,
 										height: 80,
@@ -495,9 +554,9 @@ const InboxScreen: React.FC = () => {
 										animation: 'pulse 1.5s infinite',
 									}}
 								>
-									<IonIcon 
-										icon={micOutline} 
-										style={{ fontSize: 40, color: 'white' }} 
+									<IonIcon
+										icon={micOutline}
+										style={{ fontSize: 40, color: 'white' }}
 									/>
 								</div>
 								<IonText color="primary">
@@ -506,9 +565,9 @@ const InboxScreen: React.FC = () => {
 								<IonText color="medium">
 									<p style={{ margin: '8px 0 0' }}>Speak now</p>
 								</IonText>
-								<IonButton 
-									fill="outline" 
-									color="danger" 
+								<IonButton
+									fill="outline"
+									color="danger"
 									onClick={handleStopListening}
 									style={{ marginTop: 16 }}
 								>
@@ -517,7 +576,7 @@ const InboxScreen: React.FC = () => {
 								</IonButton>
 							</div>
 						)}
-						
+
 						{/* Error State */}
 						{speechError && !isListening && (
 							<div style={{ textAlign: 'center', marginBottom: 20 }}>
@@ -530,7 +589,7 @@ const InboxScreen: React.FC = () => {
 								</IonButton>
 							</div>
 						)}
-						
+
 						{/* Transcript Display/Edit */}
 						{!isListening && !speechError && (
 							<>
@@ -554,23 +613,23 @@ const InboxScreen: React.FC = () => {
 										borderRadius: 8,
 									}}
 								/>
-								
-								<div style={{ 
-									display: 'flex', 
-									gap: 12, 
+
+								<div style={{
+									display: 'flex',
+									gap: 12,
 									marginTop: 20,
 									justifyContent: 'center',
 								}}>
-									<IonButton 
-										fill="outline" 
+									<IonButton
+										fill="outline"
 										onClick={handleRetryListening}
 									>
 										<IonIcon slot="start" icon={micOutline} />
 										{editableTranscript ? 'Re-record' : 'Start Speaking'}
 									</IonButton>
-									
+
 									{editableTranscript && (
-										<IonButton 
+										<IonButton
 											onClick={handleSaveTranscript}
 											disabled={isSaving}
 										>
@@ -589,7 +648,92 @@ const InboxScreen: React.FC = () => {
 						)}
 					</IonContent>
 				</IonModal>
-				
+
+				{/* OCR Editor Modal */}
+				<IonModal
+					isOpen={showOCRModal}
+					onDidDismiss={handleModalDidDismiss}
+					initialBreakpoint={0.75}
+					breakpoints={[0, 0.75, 1]}
+				>
+					<IonHeader>
+						<IonToolbar>
+							<IonTitle>Camera Text</IonTitle>
+							<IonButtons slot="end">
+								<IonButton onClick={handleCloseOCRModal}>
+									<IonIcon slot="icon-only" icon={closeOutline} />
+								</IonButton>
+							</IonButtons>
+						</IonToolbar>
+					</IonHeader>
+					<IonContent className="ion-padding">
+						{cameraError ? (
+							<div style={{ textAlign: 'center', marginTop: 20 }}>
+								<IonText color="danger">
+									<p>{cameraError}</p>
+								</IonText>
+								<IonButton onClick={handleCameraFabClick} style={{ marginTop: 16 }}>
+									<IonIcon slot="start" icon={cameraOutline} />
+									Try Again
+								</IonButton>
+							</div>
+						) : (
+							<>
+								<IonText color="medium">
+									<p style={{ marginBottom: 8 }}>
+										Edit extracted text before saving:
+									</p>
+								</IonText>
+								<IonTextarea
+									placeholder="Extracted text will appear here..."
+									value={editableTranscript}
+									onIonInput={(e) => setEditableTranscript(e.detail.value || '')}
+									rows={15}
+									autoGrow
+									style={{
+										'--background': 'var(--ion-color-light)',
+										'--padding-start': '12px',
+										'--padding-end': '12px',
+										'--padding-top': '12px',
+										'--padding-bottom': '12px',
+										borderRadius: 8,
+										minHeight: '200px',
+									}}
+								/>
+
+								<div style={{
+									display: 'flex',
+									gap: 12,
+									marginTop: 20,
+									justifyContent: 'center',
+								}}>
+									<IonButton
+										fill="outline"
+										onClick={handleCameraFabClick}
+									>
+										<IonIcon slot="start" icon={cameraOutline} />
+										Retake
+									</IonButton>
+
+									<IonButton
+										onClick={handleSaveTranscript}
+										disabled={isSaving || !editableTranscript}
+									>
+										{isSaving ? (
+											<IonSpinner name="crescent" />
+										) : (
+											<>
+												<IonIcon slot="start" icon={checkmarkOutline} />
+												Save to Inbox
+											</>
+										)}
+									</IonButton>
+								</div>
+							</>
+						)}
+					</IonContent>
+				</IonModal>
+
 				{/* CSS for pulse animation */}
 				<style>{`
 					@keyframes pulse {

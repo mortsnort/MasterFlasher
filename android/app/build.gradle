@@ -48,6 +48,22 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // CameraX 1.5.2
+    def camerax_version = "1.5.2"
+    implementation "androidx.camera:camera-core:${camerax_version}"
+    implementation "androidx.camera:camera-camera2:${camerax_version}"
+    implementation "androidx.camera:camera-lifecycle:${camerax_version}"
+    implementation "androidx.camera:camera-view:${camerax_version}"
+
+    // ML Kit Text Recognition
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+
+    // UCrop
+    implementation 'com.github.yalantis:ucrop:2.2.11'
+
+    // Material Components
+    implementation 'com.google.android.material:material:1.11.0'
 }
 
 apply from: 'capacitor.build.gradle'
