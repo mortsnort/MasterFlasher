@@ -98,6 +98,14 @@ _This section defines the complete end-to-end behavior of the app._
 - Speech is transcribed live.
 - Users may edit the transcription before saving it to the inbox.
 
+### Camera OCR UI
+- Tap the camera button (📷) to capture text from physical documents.
+- A live camera preview opens; capture a photo of the text you want to extract.
+- Crop the image to isolate the specific paragraph or text block.
+- On-device ML Kit extracts text from the cropped image.
+- Review and edit the extracted text before saving to the inbox.
+- **Android only**: This feature is not available on web or iOS builds.
+
 ### User-Editable Prompts
 MasterFlasher allows users to customize the prompts sent to Gemini for fact extraction and flashcard generation without modifying app code.
 
@@ -140,6 +148,12 @@ This ensures:
 
 - `src/hooks/useSpeechRecognition.ts`  
   Speech recognition hook
+
+- `src/hooks/useCameraOCR.ts`  
+  Camera OCR hook
+
+- `src/plugins/CameraOCR.ts`  
+  Camera OCR plugin interface
 
 - `src/lib/gemini/`  
   Gemini prompts, schemas, and response parsing
